@@ -111,3 +111,4 @@ def parse_long_read_dir(inputs):
         for sample in samples:
             input1.append(input_path + sample + '.fq.gz')
     return samples, input1
+
