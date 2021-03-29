@@ -92,7 +92,7 @@ def ngs_sv(sample1,sample2,ref,tool='breakdancer',rm_germline="false"): ## sampl
                 crest=crest,ref=ref
             )
         elif rm_germline == "false": ## germline/common SV
-            outfile = f"""perl {extractSClip} -i {sample1}.rmdup.bam --ref_genome {ref} -p {sample1}
+            outfile = """perl {extractSClip} -i {sample1}.rmdup.bam --ref_genome {ref} -p {sample1}
              perl {crest} -f {sample1}.cover -d {sample1}.rmdup.bam --ref_genome {ref} -t {ref}.2bit -p {sample1}""".format(
                 extractSClip=extractSClip, sample1=sample1,crest=crest,ref=ref
             )
