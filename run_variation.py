@@ -15,18 +15,20 @@ def rw_mapping():
     try:
         input_path = os.path.abspath(inputs_dir) + '/'
         out_path = os.path.abspath(outputs_dir) + '/mapping_results'
-        os.system('mkdir -p {out}'.format(out=out_path))
+        os.system('mkdir -p {0}'.format(out_path))
         # lst = os.listdir(input_path)
         outfile = []
+        global samples
+        samples = set()
         if platform == "ngs":
-            samples, input1, input2, output1, output2 = parsering.parse_short_read_dir(input_path, out_path, seqtype)
+            samples = parsering.parse_short_read_dir(input_path, out_path, seqtype)[0]
 
             outfile = mapping.Ngs(maptool, input_path, out_path,ref,maptool_parameters,seqtype).ngs()
             for i,s in enumerate(outfile):
                 fw = open('ngs'+i+'.bwa.sh','w').write(s)
 
         elif platform == 'tgs':
-            samples, input1 = parsering.parse_long_read_dir(input_path)
+            samples = parsering.parse_long_read_dir(input_path)[0]
             if maptool == 'minimap2':
                 outfile = mapping.Tgs(maptool,input_path,out_path,ref,maptool_parameters).tgs_minimap2()
                 for i,s in enumerate(outfile):
@@ -35,25 +37,45 @@ def rw_mapping():
                 outfile = mapping.Tgs(maptool,input_path,out_path,ref,maptool_parameters).tgs_ngml()
                 for i,s in enumerate(outfile):
                     fw = open('tgs'+i+'.ngml.sh','w').write(s)
+
     except Exception as e:
         print('Error files or mapping tools')
 
 def rw_call_var():
     try:
-        input_path = os.path.abspath(outputs_dir) + '/'
+        input_path = os.path.abspath(outputs_dir) + '/mapping_results'
         out_path = os.path.abspath(outputs_dir) + '/var_results'
-        os.system('mkdir -p {out}'.format(out=out_path))
+        os.system('mkdir -p {0}'.format(out_path))
         # lst = os.listdir(input_path)
+        input = [input_path + x for x in list(samples)]
+        samples = [out_path + x for x in list(samples)]
         outfile = []
         if platform == 'ngs':
-            if mode == ''
+            if mode == 'SNP_Indel':
+                if calltool == 'samtools':
+                    if v_calling == 'single':
+                        for sample in samples:
+                            outfile.append(ngs_vars.snp_indel_samtools(ref, input, sample))
+                elif calltool == 'gatk4':
+                    if bqsr == '' and vqsr == '':
+                        for sample in samples:
+                            outfile.append(ngs_vars.snp_indel_gatk(ref, input, sample, bqsr, ))
+                elif calltool == 'samtools+gatk4':
+            elif mode == 'SV':
+            elif mode == 'CNV':
+            elif mode == 'SNP_Indel_Somatic':
+            elif mode == 'SV_Somatic':
+            elif mode == 'CNV_Somatic':
+
         elif platform == 'tgs':
+            if mode == 'SNP_Indel':
+            elif mode == 'SV':
 
 def rw_annotation():
     try:
         input_path = os.path.abspath(outputs_dir) + '/var_results'
         out_path = os.path.abspath(outputs_dir) + '/annotation_results'
-        os.system('mkdir -p {out}'.format(out=out_path))
+        os.system('mkdir -p {0}'.format(out_path))
 
 
 if __name__ == '__main__':
@@ -99,7 +121,8 @@ if __name__ == '__main__':
                                                                                   'breakdancer','crest',
                                                                                   'cnvnator','control-freec','sniffles'],
                           help='Choose a detection pipeline for SNP/Indel/SV/CNV')
-    mutation.add_argument('-mode', '--mode', type=str, default='SNP+Indel',choices=['SNP+Indel','SV+CNV','SV','CNV'],
+    mutation.add_argument('-mode', '--mode', type=str, default='SNP_Indel',choices=['SNP_Indel','SV','CNV',
+                                                                              'Germline','Somatic'],
                           help='Mutation types')
     mutation.add_argument('-bqsr','--BQSR',type=str,default='',
                           help='If choose BQSR parameter(GATK4 only), you should provide a directory that only contain \
@@ -108,6 +131,9 @@ if __name__ == '__main__':
                           help='Choose a method for mutations quality control(GATK4 only), if set this parameters, \
                                please provide a directory that only contain resource files, if not hard_filtering will \
                                be used')
+    mutation.add_argument('-vc','--variation_calling', type=str,default='single',choices=['single','join'],
+                           help='Calling a group of samples together(join calling) or Variant calling with a single \
+                           sample only(single sample calling), default is single')
     mutation.add_argument('-pr', '--pairs', type=str,default='N',choices=['N','Y'],
                           help='Detect germline and somatic mutation, default is N (Not to detect)')
     mutation.add_argument('-s1', '--sample',type=str,
@@ -129,6 +155,7 @@ if __name__ == '__main__':
     mode = args.mode
     bqsr = args.BQSR
     vqsr = args.VQSR
+    v_calling = args.variation_calling
     pairs = args.pairs
     sample = args.sample
     control = args.control
