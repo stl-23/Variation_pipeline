@@ -6,7 +6,7 @@ import mapping
 import annotation
 import ngs_vars
 import tgs_vars
-from vartools import parsering
+from vartools import parsering, merge_vcf_gcvf
 
 #script_path = os.path.abspath("./")
 #make_index = os.path.join(script_path, '/tools/index.sh')
@@ -47,19 +47,33 @@ def rw_call_var():
         out_path = os.path.abspath(outputs_dir) + '/var_results'
         os.system('mkdir -p {0}'.format(out_path))
         # lst = os.listdir(input_path)
-        input = [input_path + x for x in list(samples)]
-        samples = [out_path + x for x in list(samples)]
-        outfile = []
+        path_input = [input_path + x for x in list(samples)]
+        path_output = [out_path + x for x in list(samples)]
+
         if platform == 'ngs':
             if mode == 'SNP_Indel':
                 if calltool == 'samtools':
+                    cmd_call = []
+                    cmd_merge = []
                     if v_calling == 'single':
-                        for sample in samples:
-                            outfile.append(ngs_vars.snp_indel_samtools(ref, input, sample))
+                        for sample in path_output:
+                            cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input, sample))
+                        for index, per_cmd in enumerate(outfile):
+                            fw = open(samples[index]+'ngs_samtools_call.sh','w').write(per_cmd)
+                    elif v_calling == 'join':
+                        for sample in path_output:
+                            cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input, sample))
+                        for index, per_cmd in enumerate(outfile):
+                            fw = open(samples[index] + 'ngs_samtools_call.sh', 'w').write(per_cmd)
+                        files_snp = [ i+'.samtools.raw.SNP.vcf' for i in path_input]
+                        files_indel = [i+'.samtools.raw.INDEL.vcf' for i in path_input]
+                        cmd_merge.append(merge_vcf_gcvf(files_snp,'vcf',out_path+'all_samples_snp',''))
+                        cmd_merge.append(merge_vcf_gcvf(files_indel,'vcf',out_path+'all_samples_indel',''))
+                        fw = open(samples[indel] + 'ngs_samtools_merge.sh','w').write('\n'.join(cmd_merge))
                 elif calltool == 'gatk4':
                     if bqsr == '' and vqsr == '':
                         for sample in samples:
-                            outfile.append(ngs_vars.snp_indel_gatk(ref, input, sample, bqsr, ))
+                            outfile.append(ngs_vars.snp_indel_gatk(ref, path_input, sample, bqsr, ))
                 elif calltool == 'samtools+gatk4':
             elif mode == 'SV':
             elif mode == 'CNV':
