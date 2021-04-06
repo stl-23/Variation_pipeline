@@ -43,19 +43,19 @@ def write_mapping():
 
 
 def write_call_var():
-    input_path = os.path.join(os.path.abspath(outputs_dir), '/mapping_results/')
-    out_path = os.path.join(os.path.abspath(outputs_dir), '/var_results/')
+    input_path = os.path.join(os.path.abspath(outputs_dir), 'mapping_results/')
+    out_path = os.path.join(os.path.abspath(outputs_dir), 'var_results/')
     if buildver == 'hg19':
-        genomicsdb = os.path.join(os.path.abspath(inputs_dir), '/genomicsdb/hg19/')
+        genomicsdb = os.path.join(os.path.abspath(inputs_dir), 'genomicsdb/hg19/')
         chr_list = os.path.join(os.path.abspath(inputs_dir), '/hg19_chr.list')
     elif buildver == 'hg38':
-        genomicsdb = os.path.join(os.path.abspath(inputs_dir), '/genomicsdb/hg38/')
-        chr_list = os.path.join(os.path.abspath(inputs_dir), '/hg38_chr.list')
+        genomicsdb = os.path.join(os.path.abspath(inputs_dir), 'genomicsdb/hg38/')
+        chr_list = os.path.join(os.path.abspath(inputs_dir), 'hg38_chr.list')
     else:
-        genomicsdb = os.path.join(os.path.abspath(inputs_dir), '/genomicsdb/{0}/'.format(buildver))
-        chr_list = os.path.join(os.path.abspath(inputs_dir), '/{0}_chr.list'.format(buildver))
+        genomicsdb = os.path.join(os.path.abspath(inputs_dir), 'genomicsdb/{0}/'.format(buildver))
+        chr_list = os.path.join(os.path.abspath(inputs_dir), '{0}_chr.list'.format(buildver))
 
-    tmp_dir = os.path.join(os.path.abspath(outputs_dir), '/tmp_dir/')
+    tmp_dir = os.path.join(os.path.abspath(outputs_dir), 'tmp_dir/')
     os.system('mkdir -p {0} {1}'.format(out_path,tmp))
     # lst = os.listdir(input_path)
     path_input = [input_path + x for x in list(samples)]
@@ -68,13 +68,13 @@ def write_call_var():
                 cmd_call = []
                 cmd_merge = ''
                 if v_calling == 'single': ##  single sample calling
-                    for sample in path_output:
-                        cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input, sample))
+                    for index,sample in enumerate(path_output):
+                        cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample))
                     for index, per_cmd in enumerate(cmd_call):
                         fw = open(samples[index]+'ngs_samtools_call.sh','w').write(per_cmd)
                 elif v_calling == 'join':
-                    for sample in path_output: ## join calling
-                        cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input, sample))
+                    for index,sample in enumerate(path_output): ## join calling
+                        cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample))
                     for index, per_cmd in enumerate(cmd_call):
                         fw = open(samples[index] + 'ngs_samtools_call.sh', 'w').write(per_cmd)
                     files_snp = [i+'.samtools.raw.SNP.vcf' for i in path_output]
@@ -159,8 +159,8 @@ def write_call_var():
                     cmd_vqsr = []
                     cmd_hard = []
                     ###samtools pipeline###
-                    for sample in path_output:
-                        cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_input, sample))
+                    for index,sample in enumerate(path_output):
+                        cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample))
                     for index, per_cmd in enumerate(cmd_samtools_call):
                         fw = open(samples[index]+'ngs_samtools_call.sh','w').write(per_cmd)
                     ###gatk4 pipeline###
@@ -196,8 +196,8 @@ def write_call_var():
                     cmd_vqsr = ''
                     cmd_hard = ''
                     ###samtools pipeline###
-                    for sample in path_output: ## join calling
-                        cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_input, sample))
+                    for index,sample in enumerate(path_output): ## join calling
+                        cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_inpu[index], sample))
                     for index, per_cmd in enumerate(cmd_samtools_call):
                         fw = open(samples[index] + 'ngs_samtools_call.sh', 'w').write(per_cmd)
                     files_snp = [i+'.samtools.raw.SNP.vcf' for i in path_output]
@@ -244,27 +244,81 @@ def write_call_var():
 
             elif mode == 'SV':
                 if callpipe == 'breakdancer':
-                    pass
+                    sv_cmd = []
+                    for index,sample in path_input:
+                        sv_cmd.append(ngs_vars.ngs_sv(sample,'',ref,'breakdancer','false'))
+                    for index,per_cmd in enumerate(sv_cmd):
+                        fw = open(samples[index] + 'ngs_bd_sv.sh', 'w').write(per_cmd)
                 elif callpipe == 'crest':
-                    pass
+                    sv_cmd = []
+                    for index,sample in path_input:
+                        sv_cmd.append(ngs_vars.ngs_sv(sample,'',ref,'crest','false'))
+                    for index, per_cmd in enumerate(sv_cmd):
+                        fw = open(samples[index] + 'ngs_crest_sv.sh', 'w').write(per_cmd)
 
             elif mode == 'CNV':
                 if callpipe == 'cnvnator':
-                    pass
+                    cnv_cmd = []
+                    for index, sample in path_input:
+                        cnv_cmd.append(ngs_vars.ngs_cnv(sample,'',ref,out_path,'cnvnator','human',strategy,'false'))
+                    for index, per_cmd in enumerate(cnv_cmd):
+                        fw = open(samples[index] + 'ngs_cnvnator.sh','w').write(per_cmd)
                 elif callpipe == 'control-freec':
-                    pass
+                    for index, sample in path_input:
+                        cnv_cmd.append(ngs_vars.ngs_cnv(sample,'',ref,out_path,'control-freec','human',strategy,'false'))
+                    for index, per_cmd in enumerate(cnv_cmd):
+                        fw = open(samples[index] + 'ngs_control_freec.sh','w').write(per_cmd)
 
             elif mode == 'SNP_Indel_Somatic':
                 ### gatk4 pipeline ###
+                cmd_create_pon = []
+                cmd_somatic = ''
+                if pon and not normal_samples_for_pon:
+                    pon_dir = inputs_dir+pon
+                    if germline:
+                        cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, sample,
+                                                                                control,
+                                                                                pon_dir, germline, af, 3,
+                                                                                normal_samples_for_pon_dir)[1]
+                    elif not germline:
+                        cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, sample,
+                                                                                control,
+                                                                                pon_dir, '', '', 3,
+                                                                                normal_samples_for_pon_dir)[1]
+                    fw = open('somatic_snp_indel.sh','w').write(cmd_somatic)
+
+                elif not pon and normal_samples_for_pon:
+                    normal_samples_for_pon_dir = normal_samples_for_pon.strip().split(',')
+                    if germline:
+                        cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, sample,
+                                                                                control,
+                                                                                pon_dir, germline, af, 3,
+                                                                                normal_samples_for_pon_dir)
+                    elif not germline:
+                        cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, sample,
+                                                                                control,
+                                                                                pon_dir, '', '', 3,
+                                                                                normal_samples_for_pon_dir)
+                    for index,sample in normal_samples_for_pon_dir:
+                        fw = open(sample+'create_pon.sh','w').write(cmd_create_pon[index])
+                    fw = open('somatic_snp_indel.sh','w').write(cmd_somatic)
+
 
             elif mode == 'SV_Somatic':
                 ### crest pipeline###
+                sv_cmd = ''
+                sv_cmd = ngs_vars.ngs_sv(sample,control,ref,'crest','true')
+                fw = open('somatic_sv.sh','w').write(sv_cmd)
+
             elif mode == 'CNV_Somatic':
                 ### control-freec pipeline ###
+                snv_cmd = ''
+                snv_cmd = ngs_vars.ngs_cnv(sample,control,ref,'control-freec','human',strategy,'true',out_path)
 
         elif platform == 'tgs':
             if mode == 'SNP_Indel':
-            ### gatk4 pipeline ###
+                ### gatk4 pipeline for CCS reads###
+                snp_indel_cmd = tgs_vars.tgs_snp_indel(ref,)
             elif mode == 'SV':
                 ### sniffles pipeline ###
 
@@ -313,7 +367,8 @@ if __name__ == '__main__':
     mapref.add_argument('-mp', '--maptool_parameters',type=str,default='',
                         help="Set parameters for alignment tools")
     mutation = parser.add_argument_group(title='Detection variation (SNP/Indel/SV/CNV) options')
-
+    mutation.add_argument('-sg', '--strategy', type=str, default='WGS',choices=['WGS','WES'],
+                          help='WGS or WES')
     mutation.add_argument('-cp','--callpipe',type=str,default='samtools',choices=['samtools','gatk4','samtools+gakt4',
                                                                                   'breakdancer','crest',
                                                                                   'cnvnator','control-freec','sniffles'],
@@ -333,14 +388,22 @@ if __name__ == '__main__':
     mutation.add_argument('-vc','--variation_calling', type=str,default='single',choices=['single','join'],
                            help='Calling a group of samples together(join calling) or Variant calling with a single \
                            sample only(single sample calling), default is single')  ### https://bcbio.wordpress.com/2014/10/07/joint-calling/
-    mutation.add_argument('-pr', '--pairs', type=str,default='N',choices=['N','Y'],
-                          help='Detect germline and somatic mutation, default is N (Not to detect)')
     mutation.add_argument('-s1', '--sample',type=str,
                           help='The target(tumor/disease) sample name')
     mutation.add_argument('-s2', '--control', type=str,
                            help='The control(normal) sample name')
-    mutation.add_argument('-sg', '--strategy', type=str, default='WGS',choices=['WGS','WES'],
-                          help='WGS or WES')
+    mutation.add_argument('-pon', '--panel_of_normals', type=str,default='',
+                          help='The PON(panel of normal) vcf file,if not provided, use the --normal_samples_for_pon paramters \
+                               to create the normal panel')
+    mutation.add_argument('-np', '--normal_samples_for_pon', type=str,default='',
+                          help='The sample name of normal samples to create the PON,e.g. sample1,sample2,sample3...')
+    mutation.add_argument('-gm', '--germline', type=str,default='',
+                          help='The population germline resource')
+    mutation.add_argument('-af', '--af_of_alleles_not_in_resource', type=float,default=0.001,
+                          help='The GATK4 af-of-alleles-not-in-resource parameter in Mutect2,\
+                          The default of 0.001 is appropriate for human sample analyses without any population resource.'
+                               )
+
     args = parser.parse_args()
     inputs_dir = args.input
     outputs_dir = args.outputs
@@ -355,11 +418,14 @@ if __name__ == '__main__':
     bqsr_dir = args.BQSR
     vqsr_dir = args.VQSR
     v_calling = args.variation_calling
-    pairs = args.pairs
     sample = args.sample
     control = args.control
     strategy = args.strategy
     buildver = args.build_version
+    pon = args.panel_of_normals
+    normal_samples_for_pon = args.normal_samples_for_pon
+    germline = args.germline
+    af = args.af_of_alleles_not_in_resource
 
     write_mapping()
     write_call_var()
