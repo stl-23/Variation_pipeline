@@ -1,12 +1,12 @@
 #!/usr/bin/env python
+#from os import path
 import os
-import sys
 import argparse
 import mapping
-import annotation
 import ngs_vars
 import tgs_vars
-from vartools import parsering, merge_vcf_gcvf,variation_qc,somatic_detection
+import annotation
+from vartools import parsering, merge_vcf_gvcf,variation_qc,somatic_detection
 
 #script_path = os.path.abspath("./")
 #make_index = os.path.join(script_path, '/tools/index.sh')
@@ -43,7 +43,7 @@ def write_mapping():
 
 
 def write_call_var():
-    input_path = os.path.join(os.path.abspath(outputs_dir), 'mapping_results/')
+    input_path = os.path.join(os.path.abspath(outputs_dir)+'mapping_results/')
     out_path = os.path.join(os.path.abspath(outputs_dir), 'var_results/')
     if buildver == 'hg19':
         genomicsdb = os.path.join(os.path.abspath(inputs_dir), 'genomicsdb/hg19/')
@@ -56,7 +56,7 @@ def write_call_var():
         chr_list = os.path.join(os.path.abspath(inputs_dir), '{0}_chr.list'.format(buildver))
 
     tmp_dir = os.path.join(os.path.abspath(outputs_dir), 'tmp_dir/')
-    os.system('mkdir -p {0} {1}'.format(out_path,tmp))
+    os.system('mkdir -p {0} {1}'.format(out_path,tmp_dir))
     # lst = os.listdir(input_path)
     path_input = [input_path + x for x in list(samples)]
     path_output = [out_path + x for x in list(samples)]
@@ -69,18 +69,18 @@ def write_call_var():
                 cmd_merge = ''
                 if v_calling == 'single': ##  single sample calling
                     for index,sample in enumerate(path_output):
-                        cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample))
+                        cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample, v_calling))
                     for index, per_cmd in enumerate(cmd_call):
                         fw = open(samples[index]+'ngs_samtools_call.sh','w').write(per_cmd)
                 elif v_calling == 'join':
                     for index,sample in enumerate(path_output): ## join calling
-                        cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample))
+                        cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample, v_calling))
                     for index, per_cmd in enumerate(cmd_call):
                         fw = open(samples[index] + 'ngs_samtools_call.sh', 'w').write(per_cmd)
                     files_snp = [i+'.samtools.raw.SNP.vcf' for i in path_output]
                     files_indel = [i+'.samtools.raw.INDEL.vcf' for i in path_output]
-                    cmd_merge = merge_vcf_gcvf.merge(files_snp,'vcf',out_path+'all_samples_snp',[])
-                    cmd_merge += merge_vcf_gcvf.merge(files_indel,'vcf',out_path+'all_samples_indel',[])
+                    cmd_merge = merge_vcf_gvcf.merge(files_snp,'vcf',out_path+'all_samples_snp',[])
+                    cmd_merge += merge_vcf_gvcf.merge(files_indel,'vcf',out_path+'all_samples_indel',[])
                     fw = open('ngs_samtools_merge.sh','w').write(cmd_merge)
             elif callpipe == 'gatk4':
                 if bqsr_dir and vqsr_dir: ## BQSR and VQSR
@@ -100,7 +100,7 @@ def write_call_var():
                         for index, per_cmd in enumerate(cmd_call):
                             fw = open(samples[index] + 'ngs_gatk_bqsr_call.sh', 'w').write(per_cmd)
                         files_g_vcf = [i+'.g.vcf' for i in path_output]
-                        cmd_merge = merge_vcf_gcvf.merge(files_g_vcf,'gvcf',out_path+'all_samples',
+                        cmd_merge = merge_vcf_gvcf.merge(files_g_vcf,'gvcf',out_path+'all_samples',
                                                             [4,ref,genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir])
                         cmd_vqsr = variation_qc.vqsr(ref,out_path+'all_samples.combined.vcf',vqsr_dir,out_path+"all_samples")
                         fw = open('ngs_gatk_bqsr_merge_vqsr.sh','w').write(cmd_merge+'\n'+cmd_vqsr)
@@ -122,7 +122,7 @@ def write_call_var():
                         for index, per_cmd in enumerate(cmd_call):
                             fw = open(samples[index] + 'ngs_gatk_bqsr_call.sh', 'w').write(per_cmd)
                         files_g_vcf = [i + '.g.vcf' for i in path_output]
-                        cmd_merge = merge_vcf_gcvf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
+                        cmd_merge = merge_vcf_gvcf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
                                                     [4, ref, genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir])
                         cmd_hard = variation_qc.hard_filter(ref, out_path + 'all_samples.combined.vcf', out_path + "all_samples")
                         fw = open('ngs_gatk_bqsr_merge_hard_filter.sh', 'w').write(cmd_merge + '\n' + cmd_hard)
@@ -144,7 +144,7 @@ def write_call_var():
                         for index, per_cmd in enumerate(cmd_call):
                             fw = open(samples[index] + 'ngs_gatk_call.sh', 'w').write(per_cmd)
                         files_g_vcf = [i + '.g.vcf' for i in path_output]
-                        cmd_merge = merge_vcf_gcvf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
+                        cmd_merge = merge_vcf_gvcf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
                                                          [4, ref, genomicsdb, chr_list, 1, 'map_file.list', 1, 26,
                                                           tmp_dir])
                         cmd_hard = variation_qc.hard_filter(ref, out_path + 'all_samples.combined.vcf',
@@ -160,7 +160,7 @@ def write_call_var():
                     cmd_hard = []
                     ###samtools pipeline###
                     for index,sample in enumerate(path_output):
-                        cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample))
+                        cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample,v_calling))
                     for index, per_cmd in enumerate(cmd_samtools_call):
                         fw = open(samples[index]+'ngs_samtools_call.sh','w').write(per_cmd)
                     ###gatk4 pipeline###
@@ -169,19 +169,19 @@ def write_call_var():
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T','F',bqsr_dir))
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index]))
                         for i, s in enumerate(samples):
-                            fw = open(s + 'ngs_gatk_bqsr_call_vqsr.sh', 'w').write(cmd_call[i] + '\n' + cmd_vqsr[i] + '\n')
+                            fw = open(s + 'ngs_gatk_bqsr_call_vqsr.sh', 'w').write(cmd_gatk4_call[i] + '\n' + cmd_vqsr[i] + '\n')
                     elif bqsr_dir and not vqsr_dir: ## BQSR and Hard filtering
                         for index, sample in enumerate(path_output):
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', 'F', bqsr_dir))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index] + '.vcf', path_output[index]))
                         for i, s in enumerate(samples):
-                            fw = open(s + 'ngs_gatk_call_hard_filter.sh', 'w').write(cmd_call[i] + '\n' + cmd_hard[i] + '\n')
+                            fw = open(s + 'ngs_gatk_call_hard_filter.sh', 'w').write(cmd_gatk4_call[i] + '\n' + cmd_hard[i] + '\n')
                     elif not bqsr_dir and not vqsr_dir: ## Hard filtering only
                         for index, sample in enumerate(path_output):
-                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', 'F', bqsr_dir))
+                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', 'F', bqsr_dir))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index] + '.vcf', path_output[index]))
                         for i, s in enumerate(samples):
-                            fw = open(s + 'ngs_gatk_call_hard_filter.sh', 'w').write(cmd_call[i] + '\n' + cmd_hard[i] + '\n')
+                            fw = open(s + 'ngs_gatk_call_hard_filter.sh', 'w').write(cmd_gatk4_call[i] + '\n' + cmd_hard[i] + '\n')
                     ###combine pipeline###
                     for index, sample in enumerate(path_output):
                         cmd_combine.append(ngs_vars.samtool_gatk_combine(path_output[index]))
@@ -197,13 +197,13 @@ def write_call_var():
                     cmd_hard = ''
                     ###samtools pipeline###
                     for index,sample in enumerate(path_output): ## join calling
-                        cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_inpu[index], sample))
+                        cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample,v_calling))
                     for index, per_cmd in enumerate(cmd_samtools_call):
                         fw = open(samples[index] + 'ngs_samtools_call.sh', 'w').write(per_cmd)
                     files_snp = [i+'.samtools.raw.SNP.vcf' for i in path_output]
                     files_indel = [i+'.samtools.raw.INDEL.vcf' for i in path_output]
-                    cmd_merge = merge_vcf_gcvf.merge(files_snp,'vcf',out_path+'all_samples_snp',[])
-                    cmd_merge += merge_vcf_gcvf.merge(files_indel,'vcf',out_path+'all_samples_indel',[])
+                    cmd_merge = merge_vcf_gvcf.merge(files_snp,'vcf',out_path+'all_samples_snp',[])
+                    cmd_merge += merge_vcf_gvcf.merge(files_indel,'vcf',out_path+'all_samples_indel',[])
                     fw = open('ngs_samtools_merge.sh','w').write(cmd_merge)
                     ###gatk4 pipeline###
                     if bqsr_dir and vqsr_dir:  ## BQSR and VQSR
@@ -212,7 +212,7 @@ def write_call_var():
                         for index, per_cmd in enumerate(cmd_gatk4_call):
                             fw = open(samples[index] + 'ngs_gatk_bqsr_call.sh', 'w').write(per_cmd)
                         files_g_vcf = [i+'.g.vcf' for i in path_output]
-                        cmd_merge = merge_vcf_gcvf.merge(files_g_vcf,'gvcf',out_path+'all_samples',
+                        cmd_merge = merge_vcf_gvcf.merge(files_g_vcf,'gvcf',out_path+'all_samples',
                                                             [4,ref,genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir])
                         cmd_vqsr = variation_qc.vqsr(ref,out_path+'all_samples.combined.vcf',vqsr_dir,out_path+"all_samples")
                         fw = open('ngs_gatk_bqsr_merge_vqsr.sh','w').write(cmd_merge+'\n'+cmd_vqsr)
@@ -222,7 +222,7 @@ def write_call_var():
                         for index, per_cmd in enumerate(cmd_gatk4_call):
                             fw = open(samples[index] + 'ngs_gatk_bqsr_call.sh', 'w').write(per_cmd)
                         files_g_vcf = [i + '.g.vcf' for i in path_output]
-                        cmd_merge = merge_vcf_gcvf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
+                        cmd_merge = merge_vcf_gvcf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
                                                     [4, ref, genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir])
                         cmd_hard = variation_qc.hard_filter(ref, out_path + 'all_samples.combined.vcf', out_path + "all_samples")
                         fw = open('ngs_gatk_bqsr_merge_hard_filter.sh', 'w').write(cmd_merge + '\n' + cmd_hard)
@@ -232,15 +232,15 @@ def write_call_var():
                         for index, per_cmd in enumerate(cmd_gatk4_call):
                             fw = open(samples[index] + 'ngs_gatk_call.sh', 'w').write(per_cmd)
                         files_g_vcf = [i + '.g.vcf' for i in path_output]
-                        cmd_merge = merge_vcf_gcvf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
+                        cmd_merge = merge_vcf_gvcf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
                                                          [4, ref, genomicsdb, chr_list, 1, 'map_file.list', 1, 26,
                                                           tmp_dir])
                         cmd_hard = variation_qc.hard_filter(ref, out_path + 'all_samples.combined.vcf',
                                                             out_path + "all_samples")
                         fw = open('ngs_gatk_merge_hard_filter.sh', 'w').write(cmd_merge + '\n' + cmd_hard)
                     ###combine pipeline###
-                    cmd_combine = ngs_vars.samtool_gatk_combine(path_output[index])
-                    fw = open('ngs_samtools_gatk_bqsr_vqsr_combine.sh', 'w').write(cmd_combine)
+                        cmd_combine = ngs_vars.samtool_gatk_combine(out_path+'all_samples')
+                        fw = open('ngs_samtools_gatk_bqsr_vqsr_combine.sh', 'w').write(cmd_combine)
 
             elif mode == 'SV':
                 if callpipe == 'breakdancer':
@@ -264,6 +264,7 @@ def write_call_var():
                     for index, per_cmd in enumerate(cnv_cmd):
                         fw = open(samples[index] + 'ngs_cnvnator.sh','w').write(per_cmd)
                 elif callpipe == 'control-freec':
+                    cnv_cmd = []
                     for index, sample in path_input:
                         cnv_cmd.append(ngs_vars.ngs_cnv(sample,'',ref,out_path,'control-freec','human',strategy,'false'))
                     for index, per_cmd in enumerate(cnv_cmd):
@@ -276,45 +277,44 @@ def write_call_var():
                 if pon and not normal_samples_for_pon:
                     pon_dir = inputs_dir+pon
                     if germline:
-                        cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, target,
-                                                                                control,
+                        cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,
+                                                                                con,
                                                                                 pon_dir, germline, af, 3,
-                                                                                normal_samples_for_pon_dir)[1]
+                                                                                normal_samples_for_pon)[1]
                     elif not germline:
-                        cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, target,
-                                                                                control,
+                        cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,
+                                                                                con,
                                                                                 pon_dir, '', '', 3,
-                                                                                normal_samples_for_pon_dir)[1]
+                                                                                normal_samples_for_pon)[1]
                     fw = open('somatic_snp_indel.sh','w').write(cmd_somatic)
 
                 elif not pon and normal_samples_for_pon:
-                    normal_samples_for_pon_dir = normal_samples_for_pon.strip().split(',')
                     if germline:
-                        cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, target,
-                                                                                control,
-                                                                                pon_dir, germline, af, 3,
-                                                                                normal_samples_for_pon_dir)
+                        cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,
+                                                                                con,
+                                                                                pon, germline, af, 3,
+                                                                                normal_samples_for_pon)
                     elif not germline:
-                        cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, target,
-                                                                                control,
-                                                                                pon_dir, '', '', 3,
-                                                                                normal_samples_for_pon_dir)
-                    for index,sample in normal_samples_for_pon_dir:
+                        cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,
+                                                                                con,
+                                                                                pon, '', '', 3,
+                                                                                normal_samples_for_pon)
+                    for index,sample in normal_samples_for_pon:
                         fw = open(sample+'create_pon.sh','w').write(cmd_create_pon[index])
                     fw = open('somatic_snp_indel.sh','w').write(cmd_somatic)
 
 
             elif mode == 'SV_Somatic':
                 ### crest pipeline###
-                target = input_path + '/' + target
-                control = input_path + '/' + control
+                target = input_path + '/' + tar
+                control = input_path + '/' + con
                 sv_cmd = ngs_vars.ngs_sv(target,control,ref,'crest','true')
                 fw = open('somatic_sv.sh','w').write(sv_cmd)
 
             elif mode == 'CNV_Somatic':
                 ### control-freec pipeline ###
-                target = input_path + '/' + target
-                control = input_path + '/' + control
+                target = input_path + '/' + tar
+                control = input_path + '/' + con
                 cnv_cmd = ngs_vars.ngs_cnv(target,control,ref,'control-freec','human',strategy,'true',out_path)
                 fw = open('somatic_cnv.sh','w').write(cnv_cmd)
 
@@ -336,23 +336,22 @@ def write_call_var():
                     fw = open(s+'tgs_sv_sniffles.sh','w').write(sv_cmds[i])
 
 def write_annotation():
-    try:
-        input_path = os.path.abspath(outputs_dir) + '/var_results/'
-        out_path = os.path.abspath(outputs_dir) + '/annotation_results/'
-        os.system('mkdir -p {0}'.format(out_path))
-        anno_cmd = []
+    input_path = os.path.abspath(outputs_dir) + '/var_results/'
+    out_path = os.path.abspath(outputs_dir) + '/annotation_results/'
+    os.system('mkdir -p {0}'.format(out_path))
+    anno_cmd = []
 
-        for index,sample in samples:
-            if os.path.exists(input_path+sample+'.snp.vcf'):
-                anno_cmd.append(annotation.annotation('annovar',ref,input_path+sample+'.snp.vcf',gff3,out_path+sample+'.snp',buildver))
-            elif os.path.exists(input_path+sample+'.indel.vcf'):
-                anno_cmd.append(annotation.annotation('annovar',ref,input_path+sample+'.indel.vcf',gff3,out_path+sample+'.indel',buildver))
-            elif os.path.exists(input_path+sample+'.sv.vcf'):
-                anno_cmd.append(annotation.annotation('annovar',ref,input_path+sample+'.sv.vcf',gff3,out_path+sample+'.sv',buildver))
-            elif os.path.exists(input_path+sample+'.cnv.vcf'):
-                anno_cmd.append(annotation.annotation('annovar',ref,input_path+sample+'.cnv.vcf',gff3,out_path+sample+'.cnv',buildver))
+    for index,sample in samples:
+        if os.path.exists(input_path+sample+'.snp.vcf'):
+            anno_cmd.append(annotation.annotation('annovar',ref,input_path+sample+'.snp.vcf',gff3,out_path+sample+'.snp',buildver))
+        elif os.path.exists(input_path+sample+'.indel.vcf'):
+            anno_cmd.append(annotation.annotation('annovar',ref,input_path+sample+'.indel.vcf',gff3,out_path+sample+'.indel',buildver))
+        elif os.path.exists(input_path+sample+'.sv.vcf'):
+            anno_cmd.append(annotation.annotation('annovar',ref,input_path+sample+'.sv.vcf',gff3,out_path+sample+'.sv',buildver))
+        elif os.path.exists(input_path+sample+'.cnv.vcf'):
+            anno_cmd.append(annotation.annotation('annovar',ref,input_path+sample+'.cnv.vcf',gff3,out_path+sample+'.cnv',buildver))
 
-        fw = open('annotation.sh','w').write('\n'.join(anno_cmd))
+    fw = open('annotation.sh','w').write('\n'.join(anno_cmd))
 
 
 
@@ -431,12 +430,12 @@ if __name__ == '__main__':
                           help='The GATK4 af-of-alleles-not-in-resource parameter in Mutect2,\
                           The default of 0.001 is appropriate for human sample analyses without any population resource.'
                                )
-    mutation.add_argument('-sniffles_p','--sniffles_parameters',tyep=str,default='-s 1 -d 600 --genotype --cluster --ccs_reads',
+    mutation.add_argument('-sniffles_p','--sniffles_parameters',type=str,default='-s 1 -d 600 --genotype --cluster --ccs_reads',
                           help='The sniffles parameters for SV calling. ')
 
     args = parser.parse_args()
     inputs_dir = args.input
-    outputs_dir = args.outputs
+    outputs_dir = args.output
     ref = args.reference
     gff3 = args.gff3
     platform = args.seq_platform
@@ -448,8 +447,8 @@ if __name__ == '__main__':
     bqsr_dir = args.BQSR
     vqsr_dir = args.VQSR
     v_calling = args.variation_calling
-    target = args.target
-    control = args.control
+    tar = args.target
+    con = args.control
     strategy = args.strategy
     buildver = args.build_version
     pon = args.panel_of_normals
