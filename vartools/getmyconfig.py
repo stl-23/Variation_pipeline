@@ -1,3 +1,4 @@
+import os
 import configparser
 def getConfig(section, key):
     config = configparser.ConfigParser()

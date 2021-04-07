@@ -111,4 +111,12 @@ def parse_long_read_dir(inputs):
         for sample in samples:
             input1.append(input_path + sample + '.fq.gz')
     return samples, input1
-
+'''
+def common_parse(inputs,outs,*suffix):
+    input_path = os.path.abspath(inputs) + '/'
+    out_path = os.path.abspath(outs) + '/'
+    lst = os.listdir(input_path)
+    input1 = []
+    files = [file for file in lst for s in suffix if file.endswith(s)]
+    samples = set([i.replace() for i in files])
+'''

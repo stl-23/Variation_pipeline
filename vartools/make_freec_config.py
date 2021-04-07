@@ -1,5 +1,5 @@
 
-def modify(sample1,sample2='',species='human',omic_type='WGS',control='N',outdir):
+def modify(sample1,sample2,outdir,species='human',omic_type='WGS',control='N'):
     outconfig = ''
     if species == 'human':
         if omic_type == 'WGS':
