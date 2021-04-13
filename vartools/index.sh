@@ -1,40 +1,31 @@
 #!/usr/bin/env bash
 $ref=$1
 $tool_name=$2
+$prefix=$3
 soft=./softwares.config
 tool=`grep $tool_name"=" $soft |cut -d '=' -f 2`
-awk '/^>/&&NR>1{print "";}{ printf "%s",/^>/ ? $0"\n":$0.upper() }' $ref > ref.fa
+awk '/^>/&&NR>1{print "";}{ printf "%s",/^>/ ? $0"\n":$0.upper() }' $ref > $prefix.fa
 ####statistics####
-genome_size=`awk '$0 !~ /^>/{print length}' ref.fa |awk '{s+=$1}END{print s}'`
-A=`grep -v '>' ref.fa |grep -o 'A' | wc -l`
-T=`grep -v '>' ref.fa |grep -o 'T' | wc -l`
-C=`grep -v '>' ref.fa |grep -o 'C' | wc -l`
-G=`grep -v '>' ref.fa |grep -o 'G' | wc -l`
-N=`grep -v '>' ref.fa |grep -o 'N' | wc -l`
-GC=${G}+${C}
-atcg=${A}+${T}+${C}+${G}
-GC_content=`echo "scale=2; ${GC}*100/${atcg}" |bc`
-echo -e "A:${A}\nT:${T}\nC:${C}\nG:${G}\nGC content(No N's):${GC_content}%\nTotal:{genome_size}" > ref.fa.stat.txt
+genome_size=`awk '$0 !~ /^>/{print length}' $prefix.fa |awk '{s+=$1}END{print s}'`
+
 ####index####
 if [[ $tool_name = 'BWA' && $genome_size -lt 4000000000 ]] ; then  ## <4G small genome
-  $tool index ref.fa -p ref
+  $tool index $prefix.fa -p $prefix
 elif [[ $tool_name = 'BWA' && $genome_size -ge 4000000000 ]] ; then ## >4G large genome
-  $tool index -a bwtsw -p ref
+  $tool index -a bwtsw -p $prefix
 elif [[ $tool_name = 'samtools' ]] ;then
-  $tool faidx ref.fa
+  $tool faidx $prefix.fa
 elif [[ $tool_name = 'hisat2' ]];then
-  $tool"-build" -p 8 ref.fa ref
+  $tool"-build" -p 8 $prefix.fa $prefix
 elif [[ $tool_name = 'gatk4' ]];then
-  $tool CreateSequenceDictionary -R ref.fa -O ref.dict
+  $tool CreateSequenceDictionary -R $prefix.fa -O $prefix.dict
 elif [[ $tool_name = 'fato2bit' ]];then
-  $tool ref.fa ref.fa.2bit
+  $tool $prefix.fa $prefix.fa.2bit
 
 else
   echo "Error,no such tool in softwares.config or input wrong name, please add software in software.config or use correct name"
 fi
-####split genome####
-mkdir -p ./split_fa/  && cd ./split_fa/
-for i in `grep '>' ../ref.fa |sed 's/>//g'`;do echo $i > $i.txt && awk -F'>' 'NR==FNR{ids[$0]; next} NF>1{f=($2 in ids)} f' $i.txt ../ref.fa > $i.fa && rm *.txt;done
+
 
 
     

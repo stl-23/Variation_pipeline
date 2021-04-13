@@ -1,7 +1,7 @@
 ### Do VQSR or Hard-filtering for GATK4 pipelines
 import os
 import vartools.getmyconfig as getmyconfig
-gatk4 = getmyconfig.getConfig('Variation', 'gatk4')
+gatk4 = getmyconfig.getConfig('Variation', 'gatk4').strip("'")
 
 def vqsr(ref,vcf,vqsr_dir,out):
     vqsr_config = os.listdir(os.path.abspath(vqsr_dir) + '/vqsr_config.txt')  ### resource data for training
@@ -52,17 +52,21 @@ def vqsr(ref,vcf,vqsr_dir,out):
 def hard_filter(ref,vcf,out):
     cmd = """{gatk4} SelectVariants -R {ref} -V {vcf} --select-type-to-include SNP -O {out}.raw.snp.vcf
 {gatk4} SelectVariants -R {ref} -V {vcf} --select-type-to-include INDEL -O {out}.raw.indel.vcf
-{gatk4} VariantFiltration -R {ref} -V {out}.raw.snp.vcf -filter "QD < 2.0" --filter-name "QD2" \\
+{gatk4} VariantFiltration -R {ref} -V {out}.raw.snp.vcf \\
+-filter "QD < 2.0" --filter-name "QD2" \\
 -filter "FS > 60.0" --filter-name "FS60" \\
 -filter "MQ < 40.0" --filter-name "MQ40" \\
 -filter "SOR > 3.0" --filter-name "SOR3" \\
 -filter "MQRankSum < -12.5" --filter-name "MQRankSum-12.5" \\
--filter "ReadPosRankSum < -8.0" --filter-name "ReadPosRankSum-8" -O {out}.snp.genotype.gatk.vcf
-{gatk4} VariantFiltration -R {ref} -V {out}.raw.indel.vcf -filter "QD < 2.0  --filter-name "QD2" \\
+-filter "ReadPosRankSum < -8.0" --filter-name "ReadPosRankSum-8" \\
+-O {out}.snp.genotype.gatk.vcf
+{gatk4} VariantFiltration -R {ref} -V {out}.raw.indel.vcf \\
+-filter "QD < 2.0"  --filter-name "QD2" \\
 -filter "FS > 200.0" --filter-name "FS200" \\
 -filter "SOR > 10.0" --filter-name "SOR10" \\
 -filter "MQRankSum < -12.5" --filter-name "MQRankSum-12.5" \\
--filter "ReadPosRankSum < -20.0" --filter-name "ReadPosRankSum-8" -O {out}.indel.genotype.gatk.vcf
+-filter "ReadPosRankSum < -20.0" --filter-name "ReadPosRankSum-8" \\
+-O {out}.indel.genotype.gatk.vcf
 #{gatk4} MergeVcfs -I {out}.snp.genotype.gatk.vcf -I {out}.indel.genotype.gatk.vcf -O {out}.snp.indel.genotype.gatk.vcf
 #{gatk4} SelectVariants -R {ref} -V {out}.snp.indel.genotype.gatk.vcf -select "vc.isNotFiltered()" -O {out}.snp.indel.genotype.selected.gatk.vcf
 """.format(gatk4=gatk4,ref=ref,vcf=vcf,out=out)

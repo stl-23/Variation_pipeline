@@ -1,5 +1,5 @@
 import vartools.getmyconfig as getmyconfig
-gatk4 = getmyconfig.getConfig('Variation', 'gatk4')
+gatk4 = getmyconfig.getConfig('Variation', 'gatk4').strip("'")
 
 def mutect2(input_dir,output_dir,ref,tumor,normal,interval,pon='',germline='',af=0.001,mem=3,*normals_pon):
     cmd_somatic = ''
