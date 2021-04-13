@@ -1,9 +1,9 @@
 
 from vartools import getmyconfig
 
-gatk4 = getmyconfig.getConfig('Variation', 'gatk4')
-samtools = getmyconfig.getConfig('Variation', 'samtools')
-sniffles = getmyconfig.getConfig('Variation', 'Sniffles')
+gatk4 = getmyconfig.getConfig('Variation', 'gatk4').strip("'")
+samtools = getmyconfig.getConfig('Variation', 'samtools').strip("'")
+sniffles = getmyconfig.getConfig('Variation', 'Sniffles').strip("'")
 
 def tgs_snp_indel(ref,input,sample):
     ### gatk4 pipeline ###
@@ -16,8 +16,13 @@ def tgs_snp_indel(ref,input,sample):
 {gatk4} SelectVariants  -R {ref} -V {sample}.vcf --select-type-to-include SNP -O {sample}.raw.snp.vcf
 {gatk4} SelectVariants  -R {ref} -V {sample}.vcf --select-type-to-include INDEL -O {sample}.raw.indel.vcf
 
-{gatk4} VariantFiltration -R {ref} -V {sample}.raw.snp.vcf --filter-expression \\
+{gatk4} VariantFiltration -R {ref} -V {sample}.raw.snp.vcf \\
+-filter "AS_QD < 2.0" --filter-name "ASQD2" \\
+-O {sample}.gatk.genotype.snp.vcf
 
+{gatk4} VariantFiltration -R {ref} -V {sample}.raw.indel.vcf \\
+-filter "AS_QD < 5.0" --filter-name "ASQD5" \\
+-O {sample}.gatk.genotype.indel.vcf
 """.format(gatk4=gatk4, ref=ref, input=input,sample=sample)
     return outfile
 
