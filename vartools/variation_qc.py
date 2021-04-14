@@ -4,22 +4,25 @@ import vartools.getmyconfig as getmyconfig
 gatk4 = getmyconfig.getConfig('Variation', 'gatk4').strip("'")
 
 def vqsr(ref,vcf,vqsr_dir,out):
-    vqsr_config = os.listdir(os.path.abspath(vqsr_dir) + '/vqsr_config.txt')  ### resource data for training
+    vqsr_config = os.path.join(os.path.abspath(vqsr_dir), 'vqsr_config.txt')  ### resource data for training
     with open(vqsr_config) as fh:
+        snp_resource = []
+        indel_resource = []
         for lines in fh:
             if lines.startswith('#'):
                 continue
             if lines.startswith('SNP'):
                 snp,args,snp_file = lines.strip().split(' ')
                 new_snp_file = os.path.join(vqsr_dir,snp_file)
-                snp_resource = args+' '+new_snp_file+' \\'
+                snp_resource.append(args+' '+new_snp_file+' \\')
             elif lines.startswith('INDEL'):
-                indel,args,indel_file = lines.strip.split(' ')
+                indel,args,indel_file = lines.strip().split(' ')
                 new_indel_file = os.path.join(vqsr_dir,indel_file)
-                indel_resource = args+' '+new_indel_file+' \\'
-
+                indel_resource.append(args+' '+new_indel_file+' \\')
+        snp_resource_all = '\n'.join(snp_resource).strip('\\')
+        indel_resource_all = '\n'.join(indel_resource).strip('\\')
         cmd = """{gatk4} VariantRecalibrator -R {ref} -V {vcf} \\
-{snp_resource} 
+{snp_resource_all} \\
 -an DP -an QD -an FS -an SOR -an ReadPosRankSum -an MQRankSum \\
 -tranche 100.0 -tranche 99.9 -tranche 99.0 -tranche 95.0 -tranche 90.0 \\
 -mode SNP \\
@@ -34,7 +37,7 @@ def vqsr(ref,vcf,vqsr_dir,out):
 -O {out}.snps.VQSR.gatk.vcf.gz
 
 {gatk4} VariantRecalibrator -R {ref} -V {out}.snps.VQSR.vcf.gz \\
-{indel_resource} 
+{indel_resource_all} \\
 -an DP -an QD -an FS -an SOR -an ReadPosRankSum -an MQRankSum \\
 -mode INDEL --max-gaussians 6 \\
 -rscriptFile {out}.snps.indel.plots.R \\
@@ -46,7 +49,7 @@ def vqsr(ref,vcf,vqsr_dir,out):
 -recalFile {out}.snps.indel.recal \\
 -mode INDEL \\
 -O {out}.indel.VQSR.gatk.vcf.gz
-""".format(gatk4=gatk4,ref=ref,vcf=vcf,snp_resource=snp_resource,indel_resource=indel_resource,out=out)
+""".format(gatk4=gatk4,ref=ref,vcf=vcf,snp_resource_all=snp_resource_all,indel_resource_all=indel_resource_all,out=out)
     return cmd
 
 def hard_filter(ref,vcf,out):
