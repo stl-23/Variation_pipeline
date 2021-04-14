@@ -47,7 +47,7 @@ class Ngs(Mapping):
                     #    bwa=self.maptools,parameters=self.parameters,ref=self.refs,input1=input1,input2=input2,
                     #    samtools=samtools,out_path=self.out_path,sample=sample
                     #    ))
-                    self.outfile.append("""{bwa} {parameters} {ref} {input1} {input2} | {samtools} view -bhS - > {out_path}/{sample}.bam 
+                    self.outfile.append("""{bwa} mem {parameters} {ref} {input1} {input2} | {samtools} view -bhS - > {out_path}/{sample}.bam 
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.pos.sort.bam
 {gatk4} --java-options "-Xmx8G" MarkDuplicates -I {out_path}/{sample}.pos.sort.bam -O {out_path}/{sample}.rmdup.bam -M {out_path}/{sample}.rmdup.txt --REMOVE_DUPLICATES false 
 {gatk4} --java-options "-Xmx8G" BuildBamIndex -I {out_path}/{sample}.rmdup.bam
@@ -66,7 +66,7 @@ class Ngs(Mapping):
                     #    bwa=self.maptools, parameters=self.parameters, ref=self.refs, input1=input1, input2=input2,
                     #    samtools=samtools, out_path=self.out_path, sample=sample
                     #    ))
-                    self.outfile.append("""{bwa} {parameters} {ref} {input1} {input2} | {samtools} view -bhS - > {out_path}/{sample}.bam 
+                    self.outfile.append("""{bwa} mem {parameters} {ref} {input1} {input2} | {samtools} view -bhS - > {out_path}/{sample}.bam 
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.pos.sort.bam
 {gatk4} --java-options "-Xmx8G" MarkDuplicates -I {out_path}/{sample}.pos.sort.bam -O {out_path}/{sample}.rmdup.bam -M {out_path}/{sample}.rmdup.txt --REMOVE_DUPLICATES false 
 {gatk4} --java-options "-Xmx8G" BuildBamIndex -I {out_path}/{sample}.rmdup.bam 
@@ -77,7 +77,7 @@ class Ngs(Mapping):
         elif self.type == 'SE':
             for index, sample in enumerate(samples):
                 if re.search('-R',self.parameters):
-                    self.outfile.append("""{bwa} {parameters} {ref} {input1} | {samtools} view -bhS - > {out_path}/{sample}.bam 
+                    self.outfile.append("""{bwa} mem {parameters} {ref} {input1} | {samtools} view -bhS - > {out_path}/{sample}.bam 
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.sorted.bam
 {samtools} index {out_path}/{sample}.sorted
 {samtools} rmdup -s {out_path}/{sample}.sorted.bam {out_path}/{sample}.rmdup.bam
@@ -88,7 +88,7 @@ class Ngs(Mapping):
                 else:
                     self.parameters = self.parameters + " -R '@RG\\tID:{sample}\\tLB:{sample}\\tPL:UNKNOWN\\tSM:{sample}'".format(
                             sample=sample)
-                    self.outfile.append("""{bwa} {parameters} {ref} {input1} | {samtools} view -bhS - > {out_path}/{sample}.bam
+                    self.outfile.append("""{bwa} mem {parameters} {ref} {input1} | {samtools} view -bhS - > {out_path}/{sample}.bam
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.sorted.bam
 {samtools} index {out_path}/{sample}.sorted
 {samtools} rmdup -s {out_path}/{sample}.sorted.bam {out_path}/{sample}.rmdup.bam

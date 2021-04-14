@@ -1,4 +1,5 @@
 import os,sys
+import subprocess
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath('./'))))
 from vartools import getmyconfig,make_freec_config
 
@@ -45,26 +46,26 @@ python {splitSNPindelVCF} -i {sample}.filter.vcf -p {sample}.samtools.raw""".for
     return outfile
 
 def snp_indel_gatk(ref, input, sample, gvcf, bqsr_dir):
-    lst = os.listdir(os.path.abspath(bqsr_dir) + '/')
-    known_site = ["--known_site "+vcf for vcf in lst if vcf.endswith('.vcf')]
     outfile = ''
     if bqsr_dir:  #### BQSR (Recalibration Base Quality Score)
+        lst = os.listdir(os.path.abspath(bqsr_dir))
+        known_site = ' '.join(["--known_site " + vcf for vcf in lst if vcf.endswith('.vcf')])
         if gvcf == "T":
-            outfile = """{gatk4} BaseRecalibrator -R {ref} -I {input}.rmdup.bam {known_site} -O {sample}.recal.table
-                    {gatk4} ApplyBQSR --bqsr-recal-file {sample}.recal.table -R {ref} -I {sample}.rmdup.bam -O {sample}.BQSR.bam
-                    {gatk4} HaplotypeCaller -R {ref} -I {sample}.BQSR.bam -ERC GVCF -O {sample}.g.vcf
+            outfile = """{gatk4} BaseRecalibrator -R {ref} -I {input} {known_site} -O {sample}.recal.table
+{gatk4} ApplyBQSR --bqsr-recal-file {sample}.recal.table -R {ref} -I {sample}.rmdup.bam -O {sample}.BQSR.bam
+{gatk4} HaplotypeCaller -R {ref} -I {sample}.BQSR.bam -ERC GVCF -O {sample}.g.vcf
                     """.format(gatk4=gatk4, ref=ref, input=input, sample=sample, known_site=known_site)
 
         elif gvcf == "F":
-            outfile = """{gatk4} BaseRecalibrator -R {ref} -I {input}.rmdup.bam {known_site} -O {sample}.recal.table
-                       {gatk4} ApplyBQSR --bqsr-recal-file {sample}.recal.table -R {ref} -I {sample}.rmdup.bam -O {sample}.BQSR.bam
-                       {gatk4} HaplotypeCaller -R {ref} -I {sample}.BQSR.bam -O {sample}.vcf
+            outfile = """{gatk4} BaseRecalibrator -R {ref} -I {input} {known_site} -O {sample}.recal.table
+{gatk4} ApplyBQSR --bqsr-recal-file {sample}.recal.table -R {ref} -I {sample}.rmdup.bam -O {sample}.BQSR.bam
+{gatk4} HaplotypeCaller -R {ref} -I {sample}.BQSR.bam -O {sample}.vcf
                         """.format(gatk4=gatk4, ref=ref, input=input, sample=sample, known_site=known_site)
     elif not bqsr_dir:
         if gvcf == "T":
-            outfile = """{gatk4} HaplotypeCaller -R {ref} -I {input}.rmdup.bam -ERC GVCF -O {sample}.g.vcf""".format(gatk4=gatk4, ref=ref, input=input, sample=sample)
+            outfile = """{gatk4} HaplotypeCaller -R {ref} -I {input} -ERC GVCF -O {sample}.g.vcf""".format(gatk4=gatk4, ref=ref, input=input, sample=sample)
         elif gvcf == "F":
-            outfile = """{gatk4} HaplotypeCaller -R {ref} -I {input}.rmdup.bam -O {sample}.vcf""".format(gatk4=gatk4, ref=ref, input=input, sample=sample)
+            outfile = """{gatk4} HaplotypeCaller -R {ref} -I {input} -O {sample}.vcf""".format(gatk4=gatk4, ref=ref, input=input, sample=sample)
     return outfile
 
 def samtool_gatk_combine(sample):  ## Samtools and GATK pipelines
@@ -81,62 +82,66 @@ def ngs_sv(sample1,sample2,ref,tool='breakdancer',rm_germline="false"): ## sampl
         if rm_germline == "true": ## somatic SV
             pass
         elif rm_germline == "false": ## germline/common SV
-            outfile = """perl {bam2cfg} q 20 -c 4 -g -h {sample1}.rmdup.bam {sample1}.bam.cfg
-                {breakdancer} {breakdancer_p} {sample1} {sample1}.bam.cfg > {sample1}.raw.ctx""".format(
+            outfile = """perl {bam2cfg} q 20 -c 4 -g -h {sample1} {sample1}.cfg
+{breakdancer} {breakdancer_p} {sample1} {sample1}.cfg > {sample1}.raw.ctx""".format(
             bam2cfg=bam2cfg,sample1=sample1,breakdancer=breakdancer,breakdancer_p=breakdancer_p
         )
     elif tool == 'crest':      ## Can use both paired end and singe end reads
         if rm_germline == "true":  ## somatic SV
             outfile = """perl {extractSClip} -i {sample1}.rmdup.bam --ref_genome {ref} -p {sample1}
-            perl {crest} -f {sample1}.cover -d {sample1}.rmdup.bam -g {sample2}.rmdup.bam --ref_genome {ref} -t {ref}.2bit -p {sample1}
+perl {crest} -f {sample1}.cover -d {sample1}.rmdup.bam -g {sample2}.rmdup.bam --ref_genome {ref} -t {ref}.2bit -p {sample1}
             """.format(
                 extractSClip=extractSClip,sample1=sample1,sample2=sample2,
                 crest=crest,ref=ref
             )
         elif rm_germline == "false": ## germline/common SV
-            outfile = """perl {extractSClip} -i {sample1}.rmdup.bam --ref_genome {ref} -p {sample1}
-             perl {crest} -f {sample1}.cover -d {sample1}.rmdup.bam --ref_genome {ref} -t {ref}.2bit -p {sample1}""".format(
+            outfile = """perl {extractSClip} -i {sample1} --ref_genome {ref} -p {sample1}
+perl {crest} -f {sample1}.cover -d {sample1} --ref_genome {ref} -t {ref}.2bit -p {sample1}""".format(
                 extractSClip=extractSClip, sample1=sample1,crest=crest,ref=ref
             )
     return outfile
-def ngs_cnv(sample1, sample2, ref, outdir, tool='control-freec',species='human',omic_type="WGS",rm_germline="false"):
+def ngs_cnv(sample1, sample2, ref, outdir, tool='control-freec',species='human',stragety="WGS",rm_germline="false"):
     outfile = ''
     if tool == 'cnvnator':
         bin_size = '1000'
         ref_dir = os.path.dirname(ref)
-        outfile = """{cnvnator} -root {sample1}.root -tree {sample1}.rmdup.bam 
-        {cnvnator} -root {sample1}.root -his {bin_size} -d {ref_dir}
-        {cnvnator} -root {sample1}.root -stat {bin_size}
-        {cnvnator} -root {sample1}.root -partition {bin_size}
-        {cnvnator} -root {sample1}.root -call {bin_size} > {sample1}.cnv.call.txt
-        perl {cnvnator2VCF} {sample1}.cnv.call.txt > {sample1}.cnv.vcf
+        outfile = """{cnvnator} -root {sample1}.root -tree {sample1} 
+{cnvnator} -root {sample1}.root -his {bin_size} -d {ref_dir}
+{cnvnator} -root {sample1}.root -stat {bin_size}
+{cnvnator} -root {sample1}.root -partition {bin_size}
+{cnvnator} -root {sample1}.root -call {bin_size} > {sample1}.cnv.call.txt
+perl {cnvnator2VCF} {sample1}.cnv.call.txt > {sample1}.cnv.vcf
         """.format(cnvnator=cnvnator,sample1=sample1,ref_dir=ref_dir,cnvnator2VCF=cnvnator2VCF,bin_size=bin_size)
     elif tool == 'control-freec':
         if species == 'human':
-            if omic_type == "WGS":
+            if stragety == "WGS":
                 if rm_germline == "true":
                     sample_data = sample1+'rmdup.bam'
                     control_data = sample2+'rmdup.bam'
-                    config_wgs_add_control=make_freec_config.modify(sample_data,control_data,outdir,'human','WGS','Y')
-                    outfile = """{control_freec} -conf {config_wgs_add_control}
-                    """.format(control_freec=control_freec,config_wgs_add_control=config_wgs_add_control)
+                    config_wgs_add_control=make_freec_config.modify(sample_data,control_data,ref,outdir,'human','WGS','Y')
+                    outfile = """{control_freec} -conf ./config_wgs_add_control.list
+                    """.format(control_freec=control_freec)
+                    return config_wgs_add_control, outfile
                 elif rm_germline == "false":
-                    sample_data = sample1+'rmdup.bam'
-                    config_wgs_no_control=make_freec_config.modify(sample_data,'',outdir,'human','WGS','N')
-                    outfile = """{control_freec} -conf {config_wgs_no_control}
-                    """.format(control_freec=control_freec,config_wgs_no_control=config_wgs_no_control)
-            elif omic_type == "WES":
+                    pre = sample1.rstrip('/').split('/')[-1]
+                    config_wgs_no_control=make_freec_config.modify(sample1,'',ref,outdir,'human','WGS','N')
+                    outfile = """{control_freec} -conf {pre}_config_wgs_no_control.list
+                    """.format(control_freec=control_freec,pre=pre)
+                    return config_wgs_no_control, outfile
+            elif stragety == "WES":
                 if rm_germline == "true":
                     sample_data = sample1 + 'rmdup.bam'
                     control_data = sample2 + 'rmdup.bam'
-                    config_wes_add_control = make_freec_config.modify(sample_data,control_data,outdir,'human','WES','Y')
-                    outfile = """{control_freec} -conf {config_wes_add_control}
-                    """.format(control_freec=control_freec,config_wes_add_control=config_wes_add_control)
+                    config_wes_add_control = make_freec_config.modify(sample_data,control_data,ref,outdir,'human','WES','Y')
+                    outfile = """{control_freec} -conf config_wes_add_control.list
+                    """.format(control_freec=control_freec)
+                    return config_wes_add_control, outfile
                 elif rm_germline == "false":
-                    sample_data = sample1 + 'rmdup.bam'
-                    config_wes_no_control = make_freec_config.modify(sample_data, '', outdir,'human', 'WES', 'N')
-                    outfile = """{control_freec} -conf {config_wes_no_control}
-                    """.format(control_freec=control_freec,config_wes_no_control=config_wes_no_control)
+                    pre = sample1.rstrip('/').split('/')[-1]
+                    config_wes_no_control = make_freec_config.modify(sample1, '', ref,outdir,'human', 'WES', 'N')
+                    outfile = """{control_freec} -conf {pre}_config_wgs_no_control.list
+                    """.format(control_freec=control_freec,pre=pre)
+                    return config_wes_no_control, outfile
         elif species == 'non-human':
             pass
 
