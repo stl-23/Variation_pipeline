@@ -13,9 +13,9 @@ class Mapping(object):
     def __init__(self, maptools, inputs, outputs, refs, parameters):
         if maptools == 'BWA':
             self.maptools = BWA
-        elif maptools == 'minimap2':
+        elif maptools == 'Minimap2':
             self.maptools = minimap2
-        elif maptools == 'ngml':
+        elif maptools == 'NGMLR':
             self.maptools = ngml
         self.inputs = inputs
         self.outputs = outputs
@@ -108,15 +108,15 @@ class Tgs(Mapping):
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.sorted.bam
 {samtools} index {out_path}/{sample}.sorted.bam
 {samtools} flagstat {out_path}/{sample}.sorted.bam > {out_path}/{sample}.sorted.stat""".format(
-                            minimap2=self.maptools, parameters=self.parameters, ref=self.refs, input1=input1[index],
+                        minimap2=self.maptools, parameters=self.parameters, ref=self.refs, input1=input1[index],
                         samtools=samtools, out_path=self.out_path, sample=sample
             ))
         return self.outfile
 
-    def tgs_ngml(self):
+    def tgs_ngmlr(self):
         samples, input1 = parsering.parse_long_read_dir(self.input_path)
         for index, sample in enumerate(samples):
-            self.outfile.append("""{ngml} {parameters} {ref} {input1} | {samtools} view -bhS - > {out_path}/{sample}.bam
+            self.outfile.append("""{ngml} {parameters} -r {ref} -q {input1} | {samtools} view -bhS - > {out_path}/{sample}.bam
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.sorted.bam
 {samtools} index {out_path}/{sample}.sorted.bam
 {samtools} flagstat {out_path}/{sample}.sorted.bam > {out_path}/{sample}.sorted.stat""".format(

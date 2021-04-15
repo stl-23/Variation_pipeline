@@ -11,7 +11,7 @@ from vartools import parsering, merge_vcf_gvcf,variation_qc,somatic_detection
 def write_mapping():
     input_path = os.path.abspath(inputs_dir) + '/'
     out_path = os.path.join(os.path.abspath(outputs_dir), 'mapping_results/')
-    #subprocess.run(['mkdir', '-p', '{0}'.format(out_path)])
+    subprocess.run(['mkdir', '-p', '{0}'.format(out_path)])
     # lst = os.listdir(input_path)
     outfile = []
     global samples
@@ -27,28 +27,28 @@ def write_mapping():
     elif platform == 'tgs':
         samples = parsering.parse_long_read_dir(input_path)[0]
         samples = list(samples)
-        if maptool == 'minimap2':
-            outfile = mapping.Tgs(maptool,input_path,out_path,prefix,maptool_parameters).tgs_minimap2()
+        if maptool == 'Minimap2':
+            outfile = mapping.Tgs(maptool,input_path,out_path,ref,maptool_parameters).tgs_minimap2()
             for i,s in enumerate(outfile):
                 fw = open('s1_tgs_'+samples[i]+'.minimap2.sh','w').write(s)
-        elif maptool == 'ngml':
-            outfile = mapping.Tgs(maptool,input_path,out_path,prefix,maptool_parameters).tgs_ngml()
+        elif maptool == 'NGMLR':
+            outfile = mapping.Tgs(maptool,input_path,out_path,ref,maptool_parameters).tgs_ngmlr()
             for i,s in enumerate(outfile):
-                fw = open('s1_tgs_'+samples[i]+'.ngml.sh','w').write(s)
+                fw = open('s1_tgs_'+samples[i]+'.ngmlr.sh','w').write(s)
 
 
 def write_call_var():
     input_path = os.path.join(os.path.abspath(outputs_dir), 'mapping_results/')
     out_path = os.path.join(os.path.abspath(outputs_dir), 'var_results/')
     tmp_dir = os.path.join(os.path.abspath(outputs_dir), 'tmp_dir/')
-    #subprocess.run(['mkdir','-p',out_path,tmp_dir])
+    subprocess.run(['mkdir','-p',out_path,tmp_dir])
     # lst = os.listdir(input_path)
     path_input = [input_path + x+'.rmdup.bam' for x in samples]
     path_output = [out_path + x for x in samples]
     map_file = []
 
     if platform == 'ngs':
-        if mode == 'SNP_Indel':
+        if mode == 'SNP_INDEL':
             for s in samples:
                 map_file.append(s + '\t' + s + '.g.vcf')
             fw = open('map_file.list', 'w').write('\n'.join(map_file) + '\n')
@@ -250,31 +250,50 @@ def write_call_var():
                 for index, per_cmd in enumerate(cnv_cmd):
                     fw = open('s2_ngs_'+samples[index] + '_control_freec.sh','w').write(per_cmd)
 
-        elif mode == 'SNP_Indel_Somatic':
+        elif mode == 'SNP_INDEL_Somatic':
             ### gatk4 pipeline ###
+            interval_list = prefix+'.interval_list'
             cmd_create_pon = []
             cmd_somatic = ''
             if pon and not normal_samples_for_pon:
-                pon_dir = inputs_dir+pon
                 if germline:
-                    cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con,pon_dir,
-                                                                germline, af, 3, normal_samples_for_pon)[1]
+                    cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con,interval_list,pon,
+                                                                germline, af, 3,None)[1]
                 elif not germline:
-                    cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar, con, pon_dir, '', '', 3,
-                                                                normal_samples_for_pon)[1]
-                fw = open('s2_somatic_snp_indel.sh','w').write(cmd_somatic)
+                    cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar, con, interval_list,pon,
+                                                            None,0, 3,None)[1]
+                fw = open('s2_somatic_snp.sh','w').write(cmd_somatic)
 
             elif not pon and normal_samples_for_pon:
-                if germline:
-                    cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con, pon,
-                                                                               germline, af, 3, normal_samples_for_pon)
-                elif not germline:
-                    cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar, con,
-                                                                                pon, '', '', 3, normal_samples_for_pon)
-                for index,sample in normal_samples_for_pon:
-                    fw = open('s2_'+sample+'_create_pon.sh','w').write(cmd_create_pon[index])
-                fw = open('s2_somatic_snp_indel.sh','w').write(cmd_somatic)
 
+                normal_samples_for_pon_list = normal_samples_for_pon.strip().split(',')
+                if germline:
+                    cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con,interval_list,
+                                                                        None, germline, af, 3, normal_samples_for_pon)
+                elif not germline:
+                    cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con,interval_list,
+                                                                        None, None, 0, 3, normal_samples_for_pon)
+
+                for index,sample in enumerate(normal_samples_for_pon_list):
+                    fw = open('s2.1_'+sample+'_create_pon.sh','w').write(cmd_create_pon[index])
+                fw = open('s2.2_somatic_snp.sh','w').write(cmd_somatic)
+            elif not pon and not normal_samples_for_pon:
+                if germline:
+                    cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar, con, interval_list, None,
+                                                            germline, af, 3, None)[1]
+                elif not germline:
+                    cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar, con, interval_list, None,
+                                                            None, 0, 3, None)[1]
+                fw = open('s2_somatic_snp.sh', 'w').write(cmd_somatic)
+            elif pon and normal_samples_for_pon:
+                print('Warning: parameters -pon and -np were used at the same time, prefer use the PON file first')
+                if germline:
+                    cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con,interval_list,pon,
+                                                            germline, af, 3, None)[1]
+                elif not germline:
+                    cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con,interval_list,pon,
+                                                            None, 0, 3, None)[1]
+                fw = open('s2_somatic_snp.sh','w').write(cmd_somatic)
 
         elif mode == 'SV_Somatic':
             ### crest pipeline###
@@ -287,16 +306,17 @@ def write_call_var():
             ### control-freec pipeline ###
             target = input_path + '/' + tar
             control = input_path + '/' + con
-            cnv_cmd = ngs_vars.ngs_cnv(target,control,ref,'control-freec','human',strategy,'true',out_path)
-            fw = open('s2_somatic_cnv.sh','w').write(cnv_cmd)
+            config, cnv_cmd = ngs_vars.ngs_cnv(target,control,ref,out_path,'control-freec','human',strategy,'true')
+            fw = open('config.list','w').write(config)
+            fw = open('s2.2_somatic_cnv.sh','w').write(cnv_cmd)
 
     elif platform == 'tgs':
-        if mode == 'SNP_Indel':
+        if mode == 'SNP_INDEL':
             ### gatk4 pipeline for CCS reads###
             snp_indel_cmds = []
             for index,sample in enumerate(path_input):
                 snp_indel_cmds.append(tgs_vars.tgs_snp_indel(ref,sample,path_output[index]))
-            for i,s in samples:
+            for i,s in enumerate(samples):
                 fw = open('s2_tgs_'+s+'_snp_indel_gatk4.sh', 'w').write(snp_indel_cmds[i])
 
         elif mode == 'SV':
@@ -304,13 +324,13 @@ def write_call_var():
             sv_cmds = []
             for index,sample in enumerate(path_input):
                 sv_cmds.append(tgs_vars.tgs_sv(sample,'sniffles',sniffles_p))
-            for i,s in samples:
+            for i,s in enumerate(samples):
                 fw = open('s2_tgs_'+s+'_sv_sniffles.sh','w').write(sv_cmds[i])
 
 def write_annotation():
     input_path = os.path.abspath(outputs_dir) + '/var_results/'
     out_path = os.path.abspath(outputs_dir) + '/annotation_results/'
-    #subprocess.run(['mkdir', '-p', out_path])
+    subprocess.run(['mkdir', '-p', out_path])
     anno_cmd = []
     for index,sample in enumerate(samples):
         if os.path.exists(input_path+sample+'.snp.vcf'):
@@ -327,20 +347,25 @@ def write_annotation():
 
 if __name__ == '__main__':
     examplelog = """EXAMPLES:
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg38 -sp ngs -mt BWA -cp samtools -mode SNP_Indel
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg19 -sp ngs -mt BWA -cp gatk4 -bqsr /root/my_data/known_sites/ -vqsr /root/my_data/resources/
-    -pr 'N' -tar target_name -con control_name -mode SNP_Indel
+    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg38 -sp ngs -mt BWA -cp samtools 
+    -mode SNP_INDEL
+    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg19 -sp ngs -mt BWA -cp gatk4 
+    -bqsr /root/my_data/known_sites/ -vqsr /root/my_data/resources/ -tar target_name -con control_name -mode SNP_INDEL
     python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -r /root/my_data/ref/hg19.fa -g 
-    /root/my_data/ref/hg19.gff3 -sp ngs -mt BWA -cp gatk4 -pr 'N' -tar Tu4 -con Nm_35 -mode SNP_Indel
-    /root/my_data/ref/hg19.gff3 -sp ngs -mt BWA -cp gatk4 -bqsr /root/my_data/known_sites/ -vqsr /root/my_data/resources/
-    -pr 'Y' -tar target_name -con control_name -bv 'hg19' -vc 'join' -np sample1,sample2,sample3 -gm 
-    /root/my_data/germlines/hg19/af-only-gnomad.vcf.gz -af 0.001 
+    /root/my_data/ref/hg19.gff3 -sp ngs -mt BWA -cp gatk4 -tar Tu4 -con Nm_35 -mode SNP_INDEL
     python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -r /root/my_data/ref/hg19.fa -g 
-    /root/my_data/ref/hg19.gff3 -sp ngs -mt BWA -cp control-freec -pr 'N' -mode CNV -ot WGS 
+    /root/my_data/ref/hg19.gff3 -sp ngs -mt BWA -cp control-freec -mode CNV -sg WES 
+    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg38 -sp ngs -mt BWA -cp gatk4 
+    -mode SNP_INDEL_Somatic -tar SRR1553607.1 -con SRR1553608
+    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg38 -sp ngs -mt BWA -cp gatk4 
+    -mode SNP_INDEL_Somatic -tar SRR1553607.1 -con SRR1553608 -np sample1,sample2,samples3
+    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg38 -sp ngs -mt BWA -cp gatk4 
+    -mode SNP_INDEL_Somatic -tar SRR1553607.1 -con SRR1553608 -pon /root/my_data/genomicsdb/g38/hg38_pon.vcf
+    -gm /root/my_data/germlines/hg19/af-only-gnomad.vcf.gz -af 0.001 
     python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -r /root/my_data/ref/hg19.fa -g 
-    /root/my_data/ref/hg19.gff3 -sp tgs -mt minimap2 -cp sniffles -mode SV 
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -r /root/my_data/ref/hg19.fa -g 
-    /root/my_data/ref/hg19.gff3 -sp tgs -mt ngml -cp gatk4 -mode SNP_INDEL 
+    /root/my_data/ref/hg19.gff3 -sp tgs -mt Minimap2 -cp gatk4 -mode SNP_INDEL
+     python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -r /root/my_data/ref/hg19.fa -g 
+    /root/my_data/ref/hg19.gff3 -sp tgs -mt NGMLR -cp sniffles -mode SV
     """
     parser = argparse.ArgumentParser(description='Variation pipline v1.0',
                                      epilog=examplelog,
@@ -363,18 +388,18 @@ if __name__ == '__main__':
                         help='Reads sequencing platform, ngs for illumina short reads; tgs for Pacbio or ONT long reads')
     mapref.add_argument('-st', '--seq_type', type=str, default='PE', choices=['PE', 'SE'],
                         help='Sequencing type, paired-end/mate-pair, or single end')
-    mapref.add_argument('-mt', '--maptool', type=str, default='BWA', choices=['BWA','Minimap2','NGML'],
-                        help='Choose an alignment tool,illumina:BWA;Pacbio/ONT:Minimap2/NGML')
+    mapref.add_argument('-mt', '--maptool', type=str, default='BWA', choices=['BWA','Minimap2','NGMLR'],
+                        help='Choose an alignment tool,illumina:BWA;Pacbio/ONT:Minimap2/NGMLR')
     mapref.add_argument('-mp', '--maptool_parameters',type=str,default='',
                         help="Set parameters for alignment tools")
-    mutation = parser.add_argument_group(title='Detection variation (SNP/Indel/SV/CNV) options')
+    mutation = parser.add_argument_group(title='Detection variation (SNP/INDEL/SV/CNV) options')
     mutation.add_argument('-sg', '--strategy', type=str, default='WGS',choices=['WGS','WES'],
                           help='WGS or WES')
     mutation.add_argument('-cp','--callpipe',type=str,default='samtools',choices=['samtools','gatk4','samtools+gatk4',
                                                                                   'breakdancer','crest',
                                                                                   'cnvnator','control-freec','sniffles'],
-                          help='Choose a detection pipeline for SNP/Indel/SV/CNV')
-    mutation.add_argument('-mode', '--mode', type=str, default='SNP_Indel',choices=['SNP_Indel','SNP_Indel_Somatic',
+                          help='Choose a detection pipeline for SNP/INDEL/SV/CNV')
+    mutation.add_argument('-mode', '--mode', type=str, default='SNP_INDEL',choices=['SNP_INDEL','SNP_INDEL_Somatic',
                                                                                     'CNV','SV',
                                                                                     'SV_Somatic','CNV_Somatic'],
                           help='Mutation types')
@@ -413,7 +438,7 @@ if __name__ == '__main__':
     platform = args.seq_platform
     seqtype = args.seq_type
     maptool = args.maptool
-    maptool_parameters = args.maptool_parameters
+    maptool_parameters = args.maptool_parameters.strip('"')
     callpipe = args.callpipe
     mode = args.mode
     bqsr_dir = args.BQSR
@@ -427,7 +452,7 @@ if __name__ == '__main__':
     normal_samples_for_pon = args.normal_samples_for_pon
     germline = args.germline
     af = args.af_of_alleles_not_in_resource
-    sniffles_p = args.sniffles_parameters
+    sniffles_p = args.sniffles_parameters.strip('"')
 ### arguments
     index_shell = os.path.abspath(os.path.dirname(__file__))+'/vartools/index.sh'
     statistics_shell = os.path.abspath(os.path.dirname(__file__))+'/vartools/statistics.sh'

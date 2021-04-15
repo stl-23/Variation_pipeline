@@ -116,10 +116,10 @@ perl {cnvnator2VCF} {sample1}.cnv.call.txt > {sample1}.cnv.vcf
         if species == 'human':
             if stragety == "WGS":
                 if rm_germline == "true":
-                    sample_data = sample1+'rmdup.bam'
-                    control_data = sample2+'rmdup.bam'
+                    sample_data = sample1+'.rmdup.bam'
+                    control_data = sample2+'.rmdup.bam'
                     config_wgs_add_control=make_freec_config.modify(sample_data,control_data,ref,outdir,'human','WGS','Y')
-                    outfile = """{control_freec} -conf ./config_wgs_add_control.list
+                    outfile = """{control_freec} -conf ./config.list
                     """.format(control_freec=control_freec)
                     return config_wgs_add_control, outfile
                 elif rm_germline == "false":
@@ -130,10 +130,10 @@ perl {cnvnator2VCF} {sample1}.cnv.call.txt > {sample1}.cnv.vcf
                     return config_wgs_no_control, outfile
             elif stragety == "WES":
                 if rm_germline == "true":
-                    sample_data = sample1 + 'rmdup.bam'
-                    control_data = sample2 + 'rmdup.bam'
+                    sample_data = sample1 + '.rmdup.bam'
+                    control_data = sample2 + '.rmdup.bam'
                     config_wes_add_control = make_freec_config.modify(sample_data,control_data,ref,outdir,'human','WES','Y')
-                    outfile = """{control_freec} -conf config_wes_add_control.list
+                    outfile = """{control_freec} -conf ./config.list
                     """.format(control_freec=control_freec)
                     return config_wes_add_control, outfile
                 elif rm_germline == "false":
