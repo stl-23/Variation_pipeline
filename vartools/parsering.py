@@ -86,14 +86,14 @@ def parse_short_read_dir(inputs, outs, seq_type='PE'):
 
     return samples, input1, input2, output1, output2
 
-def parse_long_read_dir(inputs):
+def parse_long_read_dir(inputs):  ## clean data
     input_path = os.path.abspath(inputs) + '/'
     #out_path = os.path.abspath(outs) + '/'
     lst = os.listdir(input_path)
     input1 = []
-    tgs_seq_suffix = ['.fa', '.fasta', '.fastq', '.fq', '.fq.gz', '.fastq.gz']
+    tgs_seq_suffix = ['.fa', '.fasta', '.fastq', '.fq', '.fa.gz', 'fasta.gz', '.fq.gz', '.fastq.gz']
     tgs_lst = [file for file in lst for suffix in tgs_seq_suffix if file.endswith(suffix)]
-    samples = [i.replace('.fa', '').replace('.fasta', '').replace('.fastq', '').replace('.fq', '').replace('.fq.gz','').replace('.fastq.gz', '') for i in tgs_lst]
+    samples = [i.replace('.fastq.gz', '').replace('.fasta.gz','').replace('.fastq', '').replace('.fasta', '').replace('fa.gz','').replace('.fq.gz','').replace('.fa', '').replace('.fq', '') for i in tgs_lst]
     samples = set(samples)
     if tgs_lst[0].endswith('.fa'):
         for sample in samples:
@@ -107,9 +107,19 @@ def parse_long_read_dir(inputs):
     elif tgs_lst[0].endswith('.fq'):
         for sample in samples:
             input1.append(input_path + sample + '.fq')
+    elif tgs_lst[0].endswith('.fa.gz'):
+        for sample in samples:
+            input1.append(input_path + sample + '.fa.gz')
+    elif tgs_lst[0].endswith('.fasta.gz'):
+        for sample in samples:
+            input1.append(input_path + sample + '.fasta.gz')
     elif tgs_lst[0].endswith('.fq.gz'):
         for sample in samples:
             input1.append(input_path + sample + '.fq.gz')
+    elif tgs_lst[0].endswith('.fastq.gz'):
+        for sample in samples:
+            input1.append(input_path + sample + '.fastq.gz')
+
     return samples, input1
 '''
 def common_parse(inputs,outs,*suffix):
@@ -118,5 +128,6 @@ def common_parse(inputs,outs,*suffix):
     lst = os.listdir(input_path)
     input1 = []
     files = [file for file in lst for s in suffix if file.endswith(s)]
-    samples = set([i.replace() for i in files])
+    samples = set([f.replace(x) for f in files for s in suffix])
+    
 '''
