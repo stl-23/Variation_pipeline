@@ -2,93 +2,41 @@
 import os
 
 def parse_short_read_dir(inputs, outs, seq_type='PE'):
-    input_path = os.path.abspath(inputs) + '/'
-    out_path = os.path.abspath(outs) + '/'
+    input_path = os.path.abspath(inputs)
+    out_path = os.path.abspath(outs)
     lst = os.listdir(input_path)
-    samples = []
     input1 = []
     input2 = []
     output1 = []
     output2 = []
+    seq_suffix = [seq + zz for seq in ['.fq', '.fastq'] for zz in ['', '.gz']]
+    lst = [file for file in lst for s in seq_suffix if file.endswith(s)]
+    if lst:
+        samples = [ i.split('_1')[0] for i in lst if '_1' in i]
+        suffix = [i.split('_1')[1] for i in lst if '_1' in i]
+    else:
+        raise IOError('No such file or directory or wrong file suffix (e.q. sample_1.fq.gz/_1.fastq.gz/_1.fq/_1.fastq)')
+    if samples:
+        if seq_type == 'PE':
+            for index, sample in enumerate(samples):
+                input1.append(os.path.join(input_path,sample+'_1'+suffix[index]))
+                input2.append(os.path.join(input_path,sample+'_2'+suffix[index]))
+                output1.append(os.path.join(out_path,sample+'_1'+suffix[index]))
+                output2.append(os.path.join(out_path,sample+'_2'+suffix[index]))
 
-    try:
-        seq_suffix = ['.fq','.fq.gz','.fastq','.fastq.gz']
-        lst = [file for file in lst for suffix in seq_suffix if file.endswith(suffix)]
-    except Exception:
-        print("No such file or directory or wrong file format,must be .fq/.fq.gz/.fastq/.fastq.gz")
-        exit()
-    if seq_type == 'PE':
-        if lst[0].endswith('.fq.gz'):
-            samples = [i.replace('_1.fq.gz', '').replace('_2.fq.gz', '') for i in lst]
-            samples = set(samples)
-            for sample in samples:
-                input1.append(input_path + sample + '_1.fq.gz')
-                input2.append(input_path + sample + '_2.fq.gz')
-                output1.append(out_path + sample + '_1.clean.fq.gz')
-                output2.append(out_path + sample + '_2.clean.fq.gz')
+        elif seq_type == 'SE':
+            for index, sample in enumerate(samples):
+                input1.append(os.path.join(input_path,sample+'_1'+suffix[index]))
+                output1.append(os.path.join(out_path, sample + '_1' + suffix[index]))
 
-        elif lst[0].endswith('.fq'):
-            samples = [i.replace('_1.fq', '').replace('_2.fq', '') for i in lst]
-            samples = set(samples)
-            for sample in samples:
-                input1.append(input_path + sample + '_1.fq')
-                input2.append(input_path + sample + '_2.fq')
-                output1.append(out_path + sample + '_1.clean.fq.gz')
-                output2.append(out_path + sample + '_2.clean.fq.gz')
-
-        elif lst[0].endswith('.fastq.gz'):
-            samples = [i.replace('_1.fastq.gz', '').replace('_2.fastq.gz', '') for i in lst]
-            samples = set(samples)
-            for sample in samples:
-                input1.append(input_path + sample + '_1.fastq.gz')
-                input2.append(input_path + sample + '_2.fastq.gz')
-                output1.append(out_path + sample + '_1.clean.fq.gz')
-                output2.append(out_path + sample + '_2.clean.fq.gz')
-
-        elif lst[0].endswith('.fastq'):
-            samples = [i.replace('_1.fastq', '').replace('_2.fastq', '') for i in lst]
-            samples = set(samples)
-            for sample in samples:
-                input1.append(input_path + sample + '_1.fastq')
-                input2.append(input_path + sample + '_2.fastq')
-                output1.append(out_path + sample + '_1.clean.fq.gz')
-                output2.append(out_path + sample + '_2.clean.fq.gz')
-
-    elif seq_type == 'SE':
-        if lst[0].endswith('.fq.gz'):
-            samples = [i.replace('.fq.gz') for i in lst]
-            samples = set(samples)
-            for sample in samples:
-                input1.append(input_path + sample + '_1.fq.gz')
-                output1.append(out_path + sample + '_1.clean.fq.gz')
-
-        elif lst[0].endswith('.fq'):
-            samples = [i.replace('.fq') for i in lst]
-            samples = set(samples)
-            for sample in samples:
-                input1.append(input_path + sample + '_1.fq')
-                output1.append(out_path + sample + '_1.clean.fq.gz')
-
-        elif lst[0].endswith('.fastq.gz'):
-            samples = [i.replace('.fastq.gz') for i in lst]
-            samples = set(samples)
-            for sample in samples:
-                input1.append(input_path + sample + '_1.fastq.gz')
-                output1.append(out_path + sample + '_1.clean.fq.gz')
-
-        elif lst[0].endswith('.fastq'):
-            samples = [i.replace('.fastq') for i in lst]
-            samples = set(samples)
-            for sample in samples:
-                input1.append(input_path + sample + '_1.fastq')
-                output1.append(out_path + sample + '_1.clean.fq.gz')
+    else:
+        raise IOError('Wrong file name (e.q. sample_1.fq.gz/_1.fastq.gz/_1.fq/_1.fastq)')
 
 
     return samples, input1, input2, output1, output2
 
 def parse_long_read_dir(inputs):  ## clean data
     input_path = os.path.abspath(inputs) + '/'
-    #out_path = os.path.abspath(outs) + '/'
     lst = os.listdir(input_path)
     input1 = []
     tgs_seq_suffix = ['.fa', '.fasta', '.fastq', '.fq', '.fa.gz', 'fasta.gz', '.fq.gz', '.fastq.gz']
@@ -121,13 +69,4 @@ def parse_long_read_dir(inputs):  ## clean data
             input1.append(input_path + sample + '.fastq.gz')
 
     return samples, input1
-'''
-def common_parse(inputs,outs,*suffix):
-    input_path = os.path.abspath(inputs) + '/'
-    out_path = os.path.abspath(outs) + '/'
-    lst = os.listdir(input_path)
-    input1 = []
-    files = [file for file in lst for s in suffix if file.endswith(s)]
-    samples = set([f.replace(x) for f in files for s in suffix])
-    
-'''
+

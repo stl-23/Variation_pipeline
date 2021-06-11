@@ -1,34 +1,31 @@
-#!/usr/bin/env bash
-$ref=$1
-$tool_name=$2
-$prefix=$3
+#!/usr/bin/bash
+ref=$1
+tool_name=$2
+prefix=$3
 soft=./softwares.config
 tool=`grep $tool_name"=" $soft |cut -d '=' -f 2`
-awk '/^>/&&NR>1{print "";}{ printf "%s",/^>/ ? $0"\n":$0.upper() }' $ref > $prefix.fa
+new_file=$prefix.fa
+if [[ ! -e "$new_file" ]];then
+    awk '/^>/&&NR>1{print "";}{ printf "%s",/^>/ ? $0"\n":toupper($0) }' $ref > $new_file
+fi
 ####statistics####
-genome_size=`awk '$0 !~ /^>/{print length}' $prefix.fa |awk '{s+=$1}END{print s}'`
-
+genome_size=`awk '$0 !~ /^>/{print length}' $new_file |awk '{s+=$1}END{print s}'`
 ####index####
-if [[ $tool_name = 'BWA' && $genome_size -lt 4000000000 ]] ; then  ## <4G small genome
-  $tool index $prefix.fa -p $prefix
-elif [[ $tool_name = 'BWA' && $genome_size -ge 4000000000 ]] ; then ## >4G large genome
-  $tool index -a bwtsw -p $prefix
+if [[ $tool_name = 'bwa' && $genome_size -lt 4000000000 ]] ; then  ## <4G small genome
+    $tool index $new_file -p $prefix
+elif [[ $tool_name = 'bwa' && $genome_size -ge 4000000000 ]] ; then ## >4G large genome
+     $tool index $new_file -a bwtsw -p $prefix
+#if [[ $tool_name = 'bwa2' ]]; then   ## Need too many memory, avoid to use it
+#    $tool index $new_file -p $prefix
 elif [[ $tool_name = 'samtools' ]] ;then
-  $tool faidx $prefix.fa
+    $tool faidx $new_file
 elif [[ $tool_name = 'hisat2' ]];then
-  $tool"-build" -p 8 $prefix.fa $prefix
+    $tool"-build" -p 8 $new_file $prefix
 elif [[ $tool_name = 'gatk4' ]];then
-  $tool CreateSequenceDictionary -R $prefix.fa -O $prefix.dict
+    $tool --java-options "-Xmx8G" CreateSequenceDictionary -R $new_file -O $prefix.dict
 elif [[ $tool_name = 'fato2bit' ]];then
-  $tool $prefix.fa $prefix.fa.2bit
+    $tool $new_file $prefix.fa.2bit
 
 else
-  echo "Error,no such tool in softwares.config or input wrong name, please add software in software.config or use correct name"
+    echo "Error,no such tool in softwares.config or input wrong name, please add software in software.config or use correct name"
 fi
-
-
-
-    
-
-
-

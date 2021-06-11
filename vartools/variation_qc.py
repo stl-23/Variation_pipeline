@@ -1,7 +1,7 @@
 ### Do VQSR or Hard-filtering for GATK4 pipelines
 import os
 import vartools.getmyconfig as getmyconfig
-gatk4 = getmyconfig.getConfig('Variation', 'gatk4').strip("'")
+gatk4 = getmyconfig.getConfig('Variation', 'gatk4')
 
 def vqsr(ref,vcf,vqsr_dir,out):
     vqsr_config = os.path.join(os.path.abspath(vqsr_dir), 'vqsr_config.txt')  ### resource data for training
@@ -53,7 +53,7 @@ def vqsr(ref,vcf,vqsr_dir,out):
     return cmd
 
 def hard_filter(ref,vcf,out):
-    cmd = """{gatk4} SelectVariants -R {ref} -V {vcf} --select-type-to-include SNP -O {out}.raw.snp.vcf
+    cmd = """{gatk4} SelectVariants --java-options "-Xmx8G" -R {ref} -V {vcf} --select-type-to-include SNP -O {out}.raw.snp.vcf
 {gatk4} SelectVariants -R {ref} -V {vcf} --select-type-to-include INDEL -O {out}.raw.indel.vcf
 {gatk4} VariantFiltration -R {ref} -V {out}.raw.snp.vcf \\
 -filter "QD < 2.0" --filter-name "QD2" \\
