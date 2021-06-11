@@ -2,12 +2,12 @@ import os
 import re
 from vartools import parsering, getmyconfig
 
-BWA = getmyconfig.getConfig('Variation','bwa2').strip("'")
-minimap2 = getmyconfig.getConfig('Variation','minimap2').strip("'")
-ngml = getmyconfig.getConfig('Variation','ngml').strip("'")
-samtools = getmyconfig.getConfig('Variation', 'samtools').strip("'")
+BWA = getmyconfig.getConfig('Variation','bwa')
+minimap2 = getmyconfig.getConfig('Variation','minimap2')
+ngml = getmyconfig.getConfig('Variation','ngml')
+samtools = getmyconfig.getConfig('Variation', 'samtools')
 #picard = getmyconfig.getConfig(('Variation','picard'))
-gatk4 = getmyconfig.getConfig('Variation','gatk4').strip("'")
+gatk4 = getmyconfig.getConfig('Variation','gatk4')
 
 class Mapping(object):
     def __init__(self, maptools, inputs, outputs, refs, parameters):
@@ -51,7 +51,8 @@ class Ngs(Mapping):
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.pos.sort.bam
 {gatk4} --java-options "-Xmx8G" MarkDuplicates -I {out_path}/{sample}.pos.sort.bam -O {out_path}/{sample}.rmdup.bam -M {out_path}/{sample}.rmdup.txt --REMOVE_DUPLICATES false 
 {gatk4} --java-options "-Xmx8G" BuildBamIndex -I {out_path}/{sample}.rmdup.bam
-{samtools} flagstat {out_path}/{sample}.rmdup.bam > {out_path}/{sample}.rmdup.stat""".format(
+{samtools} flagstat {out_path}/{sample}.rmdup.bam > {out_path}/{sample}.rmdup.stat
+rm {out_path}/{sample}.bam {out_path}/{sample}.pos.sort.bam""".format(
                         bwa=self.maptools,parameters=self.parameters,ref=self.refs,input1=input1[index],input2=input2[index],
                         samtools=samtools,out_path=self.out_path,sample=sample,gatk4=gatk4,
                         ))
@@ -70,7 +71,8 @@ class Ngs(Mapping):
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.pos.sort.bam
 {gatk4} --java-options "-Xmx8G" MarkDuplicates -I {out_path}/{sample}.pos.sort.bam -O {out_path}/{sample}.rmdup.bam -M {out_path}/{sample}.rmdup.txt --REMOVE_DUPLICATES false 
 {gatk4} --java-options "-Xmx8G" BuildBamIndex -I {out_path}/{sample}.rmdup.bam 
-{samtools} flagstat {out_path}/{sample}.rmdup.bam > {out_path}/{sample}.rmdup.stat""".format(
+{samtools} flagstat {out_path}/{sample}.rmdup.bam > {out_path}/{sample}.rmdup.stat
+rm {out_path}/{sample}.bam {out_path}/{sample}.pos.sort.bam""".format(
                         bwa=self.maptools,parameters=self.parameters,ref=self.refs,input1=input1[index],input2=input2[index],
                         samtools=samtools,out_path=self.out_path,sample=sample,gatk4=gatk4
                         ))
@@ -79,9 +81,10 @@ class Ngs(Mapping):
                 if re.search('-R',self.parameters):
                     self.outfile.append("""{bwa} mem {parameters} {ref} {input1} | {samtools} view -bhS - > {out_path}/{sample}.bam 
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.sorted.bam
-{samtools} index {out_path}/{sample}.sorted
+{samtools} index {out_path}/{sample}.sorted.bam
 {samtools} rmdup -s {out_path}/{sample}.sorted.bam {out_path}/{sample}.rmdup.bam
-{samtools} flagstat {out_path}/{sample}.rmdup.bam > {out_path}/{sample}.rmdup.stat""".format(
+{samtools} flagstat {out_path}/{sample}.rmdup.bam > {out_path}/{sample}.rmdup.stat
+rm {out_path}/{sample}.bam""".format(
                         bwa=self.maptools, parameters=self.parameters, ref=self.refs, input1=input1[index],
                         samtools=samtools, out_path=self.out_path, sample=sample
                         ))
@@ -90,9 +93,10 @@ class Ngs(Mapping):
                             sample=sample)
                     self.outfile.append("""{bwa} mem {parameters} {ref} {input1} | {samtools} view -bhS - > {out_path}/{sample}.bam
 {samtools} sort {out_path}/{sample}.bam -o {out_path}/{sample}.sorted.bam
-{samtools} index {out_path}/{sample}.sorted
+{samtools} index {out_path}/{sample}.sorted.bam
 {samtools} rmdup -s {out_path}/{sample}.sorted.bam {out_path}/{sample}.rmdup.bam
-{samtools} flagstat {out_path}/{sample}.rmdup.bam > {out_path}/{sample}.rmdup.stat""".format(
+{samtools} flagstat {out_path}/{sample}.rmdup.bam > {out_path}/{sample}.rmdup.stat
+rm {out_path}/{sample}.bam""".format(
                         bwa=self.maptools, parameters=self.parameters, ref=self.refs, input1=input1[index],
                         samtools=samtools, out_path=self.out_path, sample=sample
                         ))

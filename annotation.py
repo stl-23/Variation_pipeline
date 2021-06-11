@@ -1,9 +1,9 @@
-
+import os
 from vartools import getmyconfig
-annovar_dir = getmyconfig.getConfig('Variation', 'ANNOVAR').strip("'")
-gff3ToGenePred = getmyconfig.getConfig('Variation','gff3ToGenePred').strip("'")
-hg19_db = '/tool/annovar/humandb/hg19/'
-hg38_db = '/tool/annovar/humandb/hg38/'
+annovar_dir = getmyconfig.getConfig('Variation', 'ANNOVAR')
+gff3ToGenePred = getmyconfig.getConfig('Variation','gff3ToGenePred')
+hg19_db = os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'database/genomicsdb/hg19/annovar')
+hg38_db = os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'database/genomicsdb/hg38/annovar')
 
 def annotation(tool, ref, vcf, gff3, out, species='hg19'):
     cmd = ''

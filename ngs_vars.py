@@ -1,47 +1,46 @@
 import os,sys
-import subprocess
+import re
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath('./'))))
 from vartools import getmyconfig,make_freec_config
 
-samtools = getmyconfig.getConfig('Variation', 'samtools').strip("'")
-bcftools = getmyconfig.getConfig('Variation', 'bcftools').strip("'")
-vcfutils = getmyconfig.getConfig('Variation','vcfutils').strip("'")
-gatk4 = getmyconfig.getConfig('Variation', 'gatk4').strip("'")
-breakdancer = getmyconfig.getConfig('Variation', 'BreakDancer').strip("'")
-bam2cfg = getmyconfig.getConfig('Variation','bam2cfg').strip("'")
-crest = getmyconfig.getConfig('Variation','Crest').strip("'")
-extractSClip = getmyconfig.getConfig('Variation','extractSClip').strip("'")
-cnvnator = getmyconfig.getConfig('Variation', 'CNVnator').strip("'")
-cnvnator2VCF = getmyconfig.getConfig('Variation','cnvnator2VCF').strip("'")
-control_freec = getmyconfig.getConfig('Variation','control_freec').strip("'")
-freec_WGS_config = getmyconfig.getConfig('Variation','freec_WGS_config').strip("'")
-freec_WES_config = getmyconfig.getConfig('Variation','freec_WES_config').strip("'")
-getVarformAll = getmyconfig.getConfig('Variation','getVarformAll').strip("'")
-splitSNPindelVCF = getmyconfig.getConfig('Variation','splitSNPindelVCF').strip("'")
+samtools = getmyconfig.getConfig('Variation', 'samtools')
+bcftools = getmyconfig.getConfig('Variation', 'bcftools')
+vcfutils = getmyconfig.getConfig('Variation','vcfutils')
+gatk4 = getmyconfig.getConfig('Variation', 'gatk4')
+breakdancer = getmyconfig.getConfig('Variation', 'BreakDancer')
+bam2cfg = getmyconfig.getConfig('Variation','bam2cfg')
+crest = getmyconfig.getConfig('Variation','Crest')
+extractSClip = getmyconfig.getConfig('Variation','extractSClip')
+cnvnator = getmyconfig.getConfig('Variation', 'CNVnator')
+cnvnator2VCF = getmyconfig.getConfig('Variation','cnvnator2VCF')
+control_freec = getmyconfig.getConfig('Variation','control_freec')
+freec_WGS_config = getmyconfig.getConfig('Variation','freec_WGS_config')
+freec_WES_config = getmyconfig.getConfig('Variation','freec_WES_config')
+splitSNPindelVCF = getmyconfig.getConfig('Variation','splitSNPindelVCF')
 
 ## known_site='--known-sites /path/to/ref1.vcf --known-sites /path/to/ref2.vcf ....'
-def snp_indel_samtools(ref, input, sample, v_valling):
+def snp_indel_samtools(ref, input, sample, v_valling, bcftools_filter):
     outfile = ''
-    samtools_p = 'mpileup -C 50 -m 2 -F 0.002 -d 1000 -u -f'  ### Hard filtering
-    bcftools_p = 'call -m -f GQ'
-    vcfutils_p = 'varFilter -Q 20 -d 4 -D 1000'
+    #samtools_p = 'mpileup -C 50 -m 2 -F 0.002 -d 1000 -u -f'
+    # vcfutils_p = 'varFilter -Q 20 -d 4 -D 1000'
+    bcftools_mpileup = 'mpileup -d 1000 -Ov -f'
+    bcftools_call = 'call -mv -Oz -o'
+    ### Hard filtering
     if v_valling == 'single':  ## input is a single bam file
-        outfile = """{samtools} {samtools_p} {ref} {input_bam} | {bcftools} {bcftools_p} | gzip > {sample}.all.vcf.gz
-python {getVarformAll} -i {sample}.all.vcf.gz -o {sample}.raw.vcf
-perl {vcfutils} {vcfutils_p} {sample}.raw.vcf > {sample}.filter.vcf
-python {splitSNPindelVCF} -i {sample}.filter.vcf -p {sample}.samtools.raw
-        """.format(samtools=samtools,samtools_p=samtools_p,ref=ref,sample=sample,input_bam=input,bcftools=bcftools,
-                   getVarformAll=getVarformAll,
-                   vcfutils=vcfutils,splitSNPindelVCF=splitSNPindelVCF,bcftools_p=bcftools_p,vcfutils_p=vcfutils_p)
+        outfile = """{bcftools} {bcftools_mpileup} {ref} {input_bam} | {bcftools} {bcftools_call} {sample}.all.vcf.gz
+{bcftools} filter {bcftools_filter} {sample}.all.vcf.gz -o {sample}.filter.vcf.gz
+python {splitSNPindelVCF} {sample}.filter.vcf.gz {sample}.final
+        """.format(bcftools=bcftools,bcftools_mpileup=bcftools_mpileup,bcftools_call=bcftools_call,
+                   ref=ref,sample=sample,input_bam=input,
+                   bcftools_filter=bcftools_filter,splitSNPindelVCF=splitSNPindelVCF)
     elif v_valling == 'join': ## input is a list of bam files
         input_bams = ' '.join(input)
-        outfile = """{samtools} {samtools_p} {ref} {input_bams} | {bcftools} {bcftools_p} | gzip > {sample}.all.vcf.gz
-python {getVarformAll} -i {sample}.all.vcf.gz -o {sample}.raw.vcf
-perl {vcfutils} {vcfutils_p} {sample}.raw.vcf > {sample}.filter.vcf
-python {splitSNPindelVCF} -i {sample}.filter.vcf -p {sample}.samtools.raw""".format(
-            samtools=samtools, samtools_p=samtools_p, ref=ref, sample=sample, input_bams=input_bams, bcftools=bcftools,
-            getVarformAll=getVarformAll,
-            vcfutils=vcfutils, splitSNPindelVCF=splitSNPindelVCF, bcftools_p=bcftools_p, vcfutils_p=vcfutils_p
+        outfile = """{bcftools} {bcftools_mpileup} {ref} {input_bams} | {bcftools} {bcftools_call} {sample}.all.vcf.gz
+{bcftools} filter {bcftools_filter} {sample}.all.vcf.gz -o {sample}.filter.vcf.gz
+python {splitSNPindelVCF} {sample}.filter.vcf.gz {sample}.final""".format(
+            bcftools=bcftools, bcftools_mpileup=bcftools_mpileup, bcftools_call=bcftools_call,
+            ref=ref, sample=sample, input_bams=input_bams,
+            bcftools_filter=bcftools_filter, splitSNPindelVCF=splitSNPindelVCF
         )
     return outfile
 
