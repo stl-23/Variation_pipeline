@@ -6,10 +6,11 @@
 ##prior: Prior likelihood, the weight of this data set during training
 ##path: data set in VQSR directory
 
-SNP -resource:hapmap,known=false,training=true,truth=true,prior=15.0 hapmap_3.3.hg38.vcf
-SNP -resource:omini,known=false,training=true,truth=false,prior=12.0 resources_broad_hg38_v0_1000G_omni2.5.hg38.vcf
-SNP -resource:1000G,known=false,training=true,truth=false,prior=10.0 resources_broad_hg38_v0_1000G_phase1.snps.high_confidence.hg38.vcf
-SNP -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf
+SNP --resource:hapmap,known=false,training=true,truth=true,prior=15.0 hapmap_3.3.hg38.vcf.gz
+SNP --resource:omini,known=false,training=true,truth=false,prior=12.0 1000G_omni2.5.hg38.vcf.gz
+SNP --resource:1000G,known=false,training=true,truth=false,prior=10.0 1000G_phase1.snps.high_confidence.hg38.vcf.gz
+SNP --resource:dbsnp,known=true,training=false,truth=false,prior=7.0 Homo_sapiens_assembly38.dbsnp138.vcf.gz
 
-INDEL -resource:mills,known=true,training=true,truth=true,prior=12.0 Mills_and_1000G_gold_standard.indels.hg38.vcf
-INDEL -resource:dbsnp,known=true,training=false,truth=false,prior=2.0 dbsnp_146.hg38.vcf
+INDEL --resource:mills,known=true,training=true,truth=true,prior=12.0 Mills_and_1000G_gold_standard.indels.hg38.vcf.gz
+INDEL --resource:axiomPoly,known=false,training=true,truth=false,prior=10 Axiom_Exome_Plus.genotypes.all_populations.poly.hg38.vcf.gz
+INDEL --resource:dbsnp,known=true,training=false,truth=false,prior=2.0 Homo_sapiens_assembly38.dbsnp138.vcf.gz

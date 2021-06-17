@@ -1,5 +1,5 @@
 import vartools.getmyconfig as getmyconfig
-gatk4 = getmyconfig.getConfig('Variation', 'gatk4').strip("'")
+gatk4 = getmyconfig.getConfig('Variation', 'gatk4')
 
 def mutect2(input_dir,output_dir,ref,tumor,normal,interval,pon=None,germline=None,af=0.001,mem=3,normals_pon=None):
     cmd_somatic = ''
@@ -46,7 +46,7 @@ def mutect2(input_dir,output_dir,ref,tumor,normal,interval,pon=None,germline=Non
 {gatk4} --java-options "-Xmx{mem}g" GetPileupSummaries \\
 -I {input}/{tumor}.rmdup.bam \\
 -L {interval} \\
--V {out}/germline.SNP_biallelic.vcf.gz
+-V {out}/germline.SNP_biallelic.vcf.gz \\
 -O {out}/{tumor}.pileups.table
 {gatk4} --java-options "-Xmx{mem}g" GetPileupSummaries \\
 -I {input}/{normal}.rmdup.bam \\
@@ -114,12 +114,12 @@ def mutect2(input_dir,output_dir,ref,tumor,normal,interval,pon=None,germline=Non
 {gatk4} --java-options "-Xmx{mem}g" GetPileupSummaries \\
 -I {input}/{tumor}.rmdup.bam \\
 -L {interval} \\
--V {out}/germline.SNP_biallelic.vcf.gz
+-V {out}/germline.SNP_biallelic.vcf.gz \\
 -O {out}/{tumor}.pileups.table
 {gatk4} --java-options "-Xmx{mem}g" GetPileupSummaries \\
 -I {input}/{normal}.rmdup.bam \\
 -L {interval} \\
--V {out}/germline.SNP_biallelic.vcf.gz
+-V {out}/germline.SNP_biallelic.vcf.gz \\
 -O {out}/{normal}.pileups.table
 {gatk4} --java-options "-Xmx{mem}g" CalculateContamination \\
 -I {out}/{tumor}.pileups.table \\
@@ -179,7 +179,7 @@ def mutect2(input_dir,output_dir,ref,tumor,normal,interval,pon=None,germline=Non
 {gatk4} --java-options "-Xmx{mem}g" GetPileupSummaries \\
 -I {input}/{normal}.rmdup.bam \\
 -L {interval} \\
--V {out}/germline.SNP_biallelic.vcf.gz
+-V {out}/germline.SNP_biallelic.vcf.gz \\
 -O {out}/{normal}.pileups.table
 {gatk4} --java-options "-Xmx{mem}g" CalculateContamination \\
 -I {out}/{tumor}.pileups.table \\
