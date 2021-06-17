@@ -29,7 +29,7 @@ if __name__ == '__main__':
 	snps = []
 	indels = []
 	anno,snps,indels = splitvcf(sys.argv[1])
-	with gzip.open(sys.argv[1]+'.snp.gz','wb') as fw_snp:
+	with open(sys.argv[1]+'.snp.vcf','w') as fw_snp:
 		fw_snp.write(''.join(anno+snps))
-	with gzip.open(sys.argv[1]+'.indel.gz','wb') as fw_indel:	
+	with open(sys.argv[1]+'.indel.vcf','w') as fw_indel:
 		fw_indel.write(''.join(anno+indels))
