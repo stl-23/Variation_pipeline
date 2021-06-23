@@ -19,7 +19,7 @@ variation:v1.0 bash -c 'cd /work/ && python3 /script/variation/run_variation.py 
 -sg WGS \
 -mt BWA \
 -cp gatk4 \
--mode SNP_INDE
+-mode SNP_INDEL
 ```
 # Parameters
 ```
