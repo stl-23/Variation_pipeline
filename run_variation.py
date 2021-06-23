@@ -222,7 +222,7 @@ def write_call_var():
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index])) ### VQSR ###
                         for i, s in enumerate(samples):
                             with open('s2_ngs_'+s+'_gatk_call_vqsr.sh','w') as fw:
-                                fw.write(cmd_call[i]+'\n'+cmd_vqsr[i]+'\n')
+                                fw.write(cmd_gatk4_call[i]+'\n'+cmd_vqsr[i]+'\n')
                     ###combine pipeline###
                     for index, sample in enumerate(path_output):
                         cmd_combine.append(ngs_vars.samtool_gatk_combine(path_output[index]))
@@ -305,14 +305,14 @@ def write_call_var():
             if callpipe == 'breakdancer':
                 sv_cmd = []
                 for index,sample in enumerate(path_input):
-                    sv_cmd.append(ngs_vars.ngs_sv(sample,'',ref,'breakdancer','false'))
+                    sv_cmd.append(ngs_vars.ngs_sv(sample,'',ref,path_output[index],'breakdancer','false'))
                 for index,per_cmd in enumerate(sv_cmd):
                     with open('s2_ngs_'+samples[index] + '_breakdancer_sv.sh', 'w') as fw:
                         fw.write(per_cmd)
             elif callpipe == 'crest':
                 sv_cmd = []
                 for index,sample in enumerate(path_input):
-                    sv_cmd.append(ngs_vars.ngs_sv(sample,'',ref,'crest','false'))
+                    sv_cmd.append(ngs_vars.ngs_sv(sample,'',ref,path_output[index],'crest','false'))
                 for index, per_cmd in enumerate(sv_cmd):
                     with open('s2_ngs_'+samples[index] + '_crest_sv.sh', 'w') as fw:
                         fw.write(per_cmd)
@@ -343,30 +343,31 @@ def write_call_var():
             cmd_create_pon = []
             cmd_somatic = ''
             if pon and not normal_samples_for_pon:
-                cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con,interval_list,pon,
-                                                                germline, af, maxm,None)[1]
+                cmd_somatic = somatic_detection.mutect2(input_path, out_path, tmp_dir,ref, tar,con,interval_list,pon,
+                                                                germline, af, maxm,maxc,None)[1]
                 with open('s2_somatic_snp.sh','w') as fw:
                     fw.write(cmd_somatic)
 
             elif not pon and normal_samples_for_pon:
 
                 normal_samples_for_pon_list = normal_samples_for_pon.strip().split(',')
-                cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con,interval_list,
-                                                                        None, germline, af, maxm, normal_samples_for_pon)
+                cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, tmp_dir,ref, tar,con,
+                                                                       interval_list,None, germline, af, maxm, maxc,
+                                                                       normal_samples_for_pon)
                 for index,sample in enumerate(normal_samples_for_pon_list):
                     with open('s2.1_'+sample+'_create_pon.sh','w') as fw:
                         fw.write(cmd_create_pon[index])
                 with open('s2.2_somatic_snp.sh','w') as fw:
                     fw.write(cmd_somatic)
             elif not pon and not normal_samples_for_pon:
-                cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar, con, interval_list, None,
-                                                            germline, af, maxm, None)[1]
+                cmd_somatic = somatic_detection.mutect2(input_path, out_path, tmp_dir,ref, tar, con,
+                                                        interval_list, None, germline, af, maxm, maxc,None)[1]
                 with open('s2_somatic_snp.sh', 'w') as fw:
                     fw.write(cmd_somatic)
             elif pon and normal_samples_for_pon:
                 print('Warning: parameters -pon and -np were used at the same time, prefer use the PON file first')
-                cmd_somatic = somatic_detection.mutect2(input_path, out_path, ref, tar,con,interval_list,pon,
-                                                            germline, af, maxm, None)[1]
+                cmd_somatic = somatic_detection.mutect2(input_path, out_path, tmp_dir,ref, tar,con,interval_list,pon,
+                                                            germline, af, maxm, maxc,None)[1]
                 with open('s2_somatic_snp.sh','w') as fw:
                     fw.write(cmd_somatic)
 
@@ -402,7 +403,7 @@ def write_call_var():
             ### sniffles pipeline ###
             sv_cmds = []
             for index,sample in enumerate(path_input):
-                sv_cmds.append(tgs_vars.tgs_sv(sample,'sniffles',sniffles_p))
+                sv_cmds.append(tgs_vars.tgs_sv(sample,path_output[index],'sniffles',sniffles_p))
             for i,s in enumerate(samples):
                 with open('s2_tgs_'+s+'_sv_sniffles.sh','w') as fw:
                     fw.write(sv_cmds[i])
@@ -415,51 +416,90 @@ def write_annotation():
     if v_calling == 'single':
         for index,sample in enumerate(samples):
             with open('s3_' + sample + '_annotation.sh', 'w') as fw:
-                if mode == 'SNP_INDEL' or mode == 'SNP_INDEL_Somatic':
-                    snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.final.snp.gz', gff3,
-                                                    out_path + sample + '.final.snp', buildver)
-                    indel_cmd = annotation.annotation('annovar', ref, input_path + sample + '.final.indel.gz', gff3,
-                                                      out_path + sample + '.final.indel', buildver)
-                    fw.write(snp_cmd + '\n' + indel_cmd + '\n')
-
-                elif mode == 'SV' or mode == 'SV_Somatic':
-                    fw.write(annotation.annotation('annovar',ref,input_path+sample+'.final.sv.vcf.gz',gff3,
-                                                   out_path+sample+'.sv',buildver)+'\n')
-        #elif os.path.exists(input_path+sample+'.cnv.vcf'):
-                elif mode == 'CNV' or mode == 'CNV_Somatic':
-                    fw.write(annotation.annotation('annovar',ref,input_path+sample+'.final.cnv.vcf.gz',gff3,
+                if platform == 'ngs':
+                    if mode == 'SNP_INDEL':
+                        if callpipe == 'samtools':
+                            snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.samtools.snps.vcf.gz', gff3,
+                                                    out_path + sample + '.samtools.snp', buildver)
+                            indel_cmd = annotation.annotation('annovar', ref, input_path + sample + '.samtools.indel.vcf.gz', gff3,
+                                                      out_path + sample + '.samtools.indel', buildver)
+                            fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                        elif callpipe == 'gatk4':
+                            snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.snps.gatk.vcf.gz', gff3,
+                                                    out_path + sample + '.gatk.snp', buildver)
+                            indel_cmd = annotation.annotation('annovar', ref, input_path + sample + '.indel.gatk.vcf.gz', gff3,
+                                                      out_path + sample + '.gatk.indel', buildver)
+                            fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                        elif callpipe == 'samtools+gatk4':
+                            snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.concordance.snp.vcf.gz', gff3,
+                                                    out_path + sample + '.concordance.snp', buildver)
+                            indel_cmd = annotation.annotation('annovar', ref, input_path + sample + '.concordance.indel.vcf.gz', gff3,
+                                                      out_path + sample + '.concordance.indel', buildver)
+                            fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                    elif mode == 'CNV':
+                        if callpipe == 'cnvnator':
+                            fw.write(annotation.annotation('annovar',ref,input_path + sample + '.cnv.vcf',gff3,
                                                    out_path+sample+'.cnv',buildver)+'\n')
+                elif platform == 'tgs':
+                    if mode == 'SV':
+                        if callpipe == 'sniffles':
+                            fw.write(annotation.annotation('annovar', ref, input_path + sample + '.sv.vcf', gff3,
+                                                       out_path + sample + '.sv', buildver) + '\n')
+
     elif v_calling == 'join':
         with open('s3_annotation.sh', 'w') as fw:
-            if mode == 'SNP_INDEL' or mode == 'SNP_INDEL_Somatic':
-                snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.final.snp.gz', gff3,
-                                                out_path + 'all_samples.final.snp', buildver)
-                indel_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.final.indel.gz', gff3,
-                                                  out_path + 'all_samples.final.indel', buildver)
-                fw.write(snp_cmd + '\n' + indel_cmd + '\n')
-
+            if mode == 'SNP_INDEL':
+                if callpipe == 'samtools':
+                    snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.samtools.snps.vcf.gz', gff3,
+                                                out_path + 'all_samples.samtools.snp', buildver)
+                    indel_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.samtools.indel.vcf.gz', gff3,
+                                                  out_path + 'all_samples.samtools.indel', buildver)
+                    fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                elif callpipe == 'gatk4':
+                    snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.snps.gatk.vcf.gz', gff3,
+                                                    out_path + 'all_samples.gatk.snp', buildver)
+                    indel_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.indel.gatk.vcf.gz', gff3,
+                                                      out_path + 'all_samples.gatk.indel', buildver)
+                    fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                elif callpipe == 'samtools+gatk4':
+                    snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.concordance.snp.vcf.gz', gff3,
+                                                    out_path + 'all_samples.concordance.snp', buildver)
+                    indel_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.concordance.indel.vcf.gz', gff3,
+                                                      out_path + 'all_samples.concordance.indel', buildver)
+                    fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+            elif mode == 'SNP_INDEL_Somatic':
+                cmd = annotation.annotation('annovar', ref, input_path + tar+'_'+con+'_somatic_m2.filter.pass.vcf.gz', gff3,
+                                                    out_path + tar+'_'+con+'somatic', buildver)
+                fw.write(cmd+'\n')
 
 if __name__ == '__main__':
     examplelog = """EXAMPLES:
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg38 -sp ngs -mt BWA -cp samtools 
-    -sg WGS -mode SNP_INDEL
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg19 -sp ngs -mt BWA -cp gatk4 
-    -bqsr -vqsr -mode SNP_INDEL
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -r /root/my_data/ref/hg19.fa -g 
-    /root/my_data/ref/hg19.gff3 -sp ngs -mt BWA -cp gatk4 -tar Tu4 -con Nm_35 -mode SNP_INDEL
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -r /root/my_data/ref/hg19.fa -g 
-    /root/my_data/ref/hg19.gff3 -sp ngs -mt BWA -cp control-freec -mode CNV -sg WES 
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg38 -sp ngs -mt BWA -cp gatk4 
-    -mode SNP_INDEL_Somatic -tar SRR1553607.1 -con SRR1553608
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg38 -sp ngs -mt BWA -cp gatk4 
-    -mode SNP_INDEL_Somatic -tar SRR1553607.1 -con SRR1553608 -np sample1,sample2,samples3
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -bv hg38 -sp ngs -mt BWA -cp gatk4 
-    -mode SNP_INDEL_Somatic -tar SRR1553607.1 -con SRR1553608 -pon /root/my_data/genomicsdb/g38/hg38_pon.vcf
-    -gm /root/my_data/germlines/hg19/af-only-gnomad.vcf.gz -af 0.001 
-    python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -r /root/my_data/ref/hg19.fa -g 
-    /root/my_data/ref/hg19.gff3 -sp tgs -mt Minimap2 -cp gatk4 -mode SNP_INDEL
-     python run_variation.py -i /root/my_data/cleandata/ -o /root/my_data/results/ -r /root/my_data/ref/hg19.fa -g 
-    /root/my_data/ref/hg19.gff3 -sp tgs -mt NGMLR -cp sniffles -mode SV
+    ## samtools single calling
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp samtools -mode SNP_INDEL
+    ## gatk4 single calling
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp gatk4 -mode SNP_INDEL
+    ## join calling
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools -vc join -mode SNP_INDEL
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -mode SNP_INDEL
+    ## bqsr & vqsr
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
+    ## samtools+gatk4
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools+gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
+    ## somatic SNP/Indel
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode SNP_INDEL_Somatic
+    ## somatic SNP/Indel create PON
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -np H9-AB-p113_S13_L001,H9-AB-p113_S5_L001,H9-AB-p116_S4_L001 -mode SNP_INDEL_Somatic
+    ## SV
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp breakdancer -mode SV'
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp crest -mode SV
+    ## CNV
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp cnvnator -mode CNV
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -mode CNV
+    ## somatic CNV 
+    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode CNV_Somatic
+    ## TGS SV 
+    python3 /test/scripts/variation/run_variation.py -i /test/my_data/qc_test/results/pacbio/DNA/ -o /test/my_data/variation_test/results/ -bv hg38 -sp tgs -mt Minimap2 -mp "--cs --MD -ax map-pb" -cp sniffles -mode SV
+    python3 /test/scripts/variation/run_variation.py -i /test/my_data/qc_test/results/pacbio/DNA/ -o /test/my_data/variation_test/results/ -bv hg38 -sp tgs -mt NGMLR -mp "-x pacbio" -cp sniffles -mode SV
     """
     parser = argparse.ArgumentParser(description='Variation pipeline v1.0',
                                      epilog=examplelog,
@@ -479,6 +519,8 @@ if __name__ == '__main__':
                           help='Human genome build version,if used,do not set -r and -g')
     general.add_argument('-mx','--max_memory',type=int,default=24,
                          help='The maximum JAVA memory in the pipeline')
+    general.add_argument('-mc','--max_thread',type=int,default=12,
+                         help='The maximum Java theads for GATK GenomicsDBImport')
     mapref = parser.add_argument_group(title='Mapping options')
     mapref.add_argument('-sp', '--seq_platform',type=str, default='ngs',choices=['ngs','tgs'],
                         help='Reads sequencing platform, ngs for illumina short reads; tgs for Pacbio or ONT long reads')
@@ -492,12 +534,13 @@ if __name__ == '__main__':
     mutation.add_argument('-sg', '--strategy', type=str, default='WGS',choices=['WGS','WES'],
                           help='WGS or WES')
     mutation.add_argument('-cp','--callpipe',type=str,default='samtools',choices=['samtools','gatk4','samtools+gatk4',
-                                                                                  'breakdancer','crest',
-                                                                                  'cnvnator','control-freec','sniffles'],
+                                                                                  'breakdancer',
+                                                                                  'cnvnator','control-freec',
+                                                                                  'sniffles'],
                           help='Choose a detection pipeline for SNP/INDEL/SV/CNV')
     mutation.add_argument('-mode', '--mode', type=str, default='SNP_INDEL',choices=['SNP_INDEL','SNP_INDEL_Somatic',
                                                                                     'CNV','SV',
-                                                                                    'SV_Somatic','CNV_Somatic'],
+                                                                                    'CNV_Somatic'],
                           help='Mutation types')
     mutation.add_argument('--bcftools_filter',type=str,default='',
                           help='Hard filter paramters for SNP/Indel detection pipeline by bcftools. See '
@@ -542,6 +585,7 @@ if __name__ == '__main__':
     platform = args.seq_platform
     seqtype = args.seq_type
     maxm = args.max_memory
+    maxc = args.max_thread
     maptool = args.maptool
     maptool_parameters = args.maptool_parameters.strip('"')
     callpipe = args.callpipe
@@ -565,7 +609,7 @@ if __name__ == '__main__':
     index_shell = os.path.abspath(os.path.dirname(__file__))+'/vartools/index.sh'
     statistics_shell = os.path.abspath(os.path.dirname(__file__))+'/vartools/statistics.sh'
     ## check reference data
-    if buildver and not ref and not gff3:
+    if buildver and not (ref or gff3):
         if buildver == 'hg19':
             genomicsdb = os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'database/genomicsdb/hg19/')
             ref = os.path.join(genomicsdb,'hg19.fa')
@@ -580,8 +624,12 @@ if __name__ == '__main__':
                 interval_list = prefix + '.interval_list'
             if not germline:
                 germline = os.path.join(genomicsdb,'pon_and_germline','somatic-hg19_af-only-gnomad.hg19.vcf.gz')
-            if not (pon and normal_samples_for_pon):
+            if not (pon or normal_samples_for_pon):
                 pon = os.path.join(genomicsdb,'pon_and_germline','somatic-hg19_1000g_pon.hg19.vcf.gz')
+            elif pon and normal_samples_for_pon:
+                print('Warning: parameters -pon and -np were used at the same time, prefer use the PON file first')
+                normal_samples_for_pon = ''
+
         elif buildver == 'hg38':
             genomicsdb = os.path.join(os.path.abspath(os.path.dirname(os.path.dirname(__file__))), 'database/genomicsdb/hg38/')
             ref = os.path.join(genomicsdb,'hg38.fa')
@@ -596,15 +644,18 @@ if __name__ == '__main__':
                 interval_list = prefix + '.interval_list'
             if not germline:
                 germline = os.path.join(genomicsdb,'pon_and_germline','somatic-hg38_af-only-gnomad.hg38.vcf.gz')
-            if not (pon and normal_samples_for_pon):
+            if not (pon or normal_samples_for_pon):
                 pon = os.path.join(genomicsdb,'pon_and_germline','somatic-hg38_1000g_pon.hg38.vcf.gz')
+            elif pon and normal_samples_for_pon:
+                print('Warning: parameters -pon and -np were used at the same time, prefer use the PON file first')
+                normal_samples_for_pon = ''
        # else:
        #     genomicsdb = os.path.join(os.path.abspath(inputs_dir), 'genomicsdb/{0}/'.format(buildver))
        #     ref = os.path.join(genomicsdb,'{}.fa'.format(buildver))
        #     gff3 = os.path.join(genomicsdb, '{}.gff'.format(buildver))
        #    chr_list = os.path.join(os.path.abspath(inputs_dir), '{0}_chr.list'.format(buildver))
 
-    elif not buildver and ref and gff3:
+    elif not buildver and (ref and gff3):
         prefix = os.path.splitext(os.path.basename(os.path.abspath(ref)))[0]
         if maptool == 'BWA':
             subprocess.check_call(['sh', index_shell, ref, 'bwa', prefix])
@@ -615,8 +666,10 @@ if __name__ == '__main__':
         if mode == 'SNP_INDEL_Somatic' and not interval:
             raise Exception('Error: no interval file provided')
 
-    elif buildver and ref or gff3:
+    elif buildver and (ref or gff3):
         raise Exception('Do not use -bv and -r/-g together')
+    else:
+        raise Exception('Reference data lacked')
 
     ## check bcftools hard filter paramters
     if bcftools_filter == '':
@@ -625,11 +678,24 @@ if __name__ == '__main__':
         elif strategy == 'WES':
             bcftools_filter = """-sLowQual -g3 -G10 -e'%QUAL<10 || (RPB<0.1 && %QUAL<15) || (AC<2 && %QUAL<15) || %MAX(DV)<=3 || %MAX(DV)/%MAX(DP)<=0.3' -Oz"""
     ## check somatic muatation
-    if mode == 'SNP_INDEL_Somatic' or mode == 'SV_Somatic' or mode == 'CNV_Somatic':
+    if mode == 'SNP_INDEL_Somatic' or mode == 'CNV_Somatic':
         if not (tar and con):
             raise Exception('Error: no target and control samples')
     if not germline:
         af = 0
+    ## check sequencing platform
+    if platform == 'tgs':
+        if maptool == 'BWA':
+            raise Exception('Warning: Minimap2 or NGMLR is more suitable to deal with long reads')
+        elif maptool == 'Minimap2':
+            if maptool_parameters == '':
+                maptool_parameters = '--cs --MD -a'
+        elif maptool == 'NGMLR':
+            if maptool_parameters == '':
+                maptool_parameters = '-x pacbio'  # pacbio: -x pacbio   nanopore: -x ont
+    else:
+        if maptool == 'Minimap2' or maptool == 'NGMLR':
+            print('Warning: BWA is used to map short reads in this pipeline,note the format if use minimap2 or NGMLR')
 
     write_mapping()
     write_call_var()

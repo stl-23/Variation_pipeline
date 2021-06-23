@@ -1,5 +1,4 @@
 import os,sys
-import re
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath('./'))))
 from vartools import getmyconfig,make_freec_config
 
@@ -17,6 +16,7 @@ control_freec = getmyconfig.getConfig('Variation','control_freec')
 freec_WGS_config = getmyconfig.getConfig('Variation','freec_WGS_config')
 freec_WES_config = getmyconfig.getConfig('Variation','freec_WES_config')
 splitSNPindelVCF = getmyconfig.getConfig('Variation','splitSNPindelVCF')
+makeGraph = getmyconfig.getConfig('Variation','makeGraph')
 
 ## known_site='--known-sites /path/to/ref1.vcf --known-sites /path/to/ref2.vcf ....'
 def snp_indel_samtools(ref, input, sample, v_valling, bcftools_filter):
@@ -78,49 +78,61 @@ def snp_indel_gatk(ref, input, sample, gvcf, bqsr_dir):
     return outfile
 
 def samtool_gatk_combine(sample):  ## Samtools and GATK pipelines
-    cmd = """{gatk4} SelectVariants --variant {sample}.snps.gatk.vcf.gz --concordance {sample}.samtools.snp.vcf.gz -O {sample}.final.concordance.snp.gz
-{gatk4} SelectVariants --variant {sample}.indel.gatk.vcf.gz --concordance {sample}.samtools.indel.vcf.gz -O {sample}.final.concordance.indel.gz""".format(
+    cmd = """{gatk4} SelectVariants --variant {sample}.snps.gatk.vcf.gz --concordance {sample}.samtools.snp.vcf.gz -O {sample}.concordance.snp.vcf.gz
+{gatk4} SelectVariants --variant {sample}.indel.gatk.vcf.gz --concordance {sample}.samtools.indel.vcf.gz -O {sample}.concordance.indel.vcf.gz""".format(
         gatk4=gatk4,sample=sample)
     return cmd
 
-def ngs_sv(sample1,sample2,ref,tool='breakdancer',rm_germline="false"): ## sample1:disease/somatic; sample2:control
+def ngs_sv(sample1,sample2,ref,out,tool='breakdancer',rm_germline="false"): ## sample1:disease/somatic; sample2:control
     outfile = ''
     breakdancer_p = '-q 20 -d'
+    input_path = os.path.dirname(sample1)
+    sample1_name = os.path.basename(sample1).replace('.rmdup.bam', '')
+    #sample2_name = os.path.basename(sample2).replace('.rmdup.bam', '')
     #crest_p = ''
     if tool == 'breakdancer':  ## Only use paired end reads
         if rm_germline == "true": ## somatic SV
             pass
         elif rm_germline == "false": ## germline/common SV
-            outfile = """perl {bam2cfg} q 20 -c 4 -g -h {sample1} {sample1}.cfg
-{breakdancer} {breakdancer_p} {sample1} {sample1}.cfg > {sample1}.raw.ctx""".format(
-            bam2cfg=bam2cfg,sample1=sample1,breakdancer=breakdancer,breakdancer_p=breakdancer_p
-        )
+            outfile = """perl {bam2cfg} -q 20 -c 4 -g {sample1} > {sample1}.cfg
+{breakdancer} {breakdancer_p} {sample1_name} {sample1}.cfg > {out}.raw.ctx""".format(
+                bam2cfg=bam2cfg,sample1=sample1,breakdancer=breakdancer,breakdancer_p=breakdancer_p,
+                out=out,sample1_name=sample1_name
+            )
     elif tool == 'crest':      ## Can use both paired end and singe end reads
         if rm_germline == "true":  ## somatic SV
-            outfile = """perl {extractSClip} -i {sample1}.rmdup.bam --ref_genome {ref} -p {sample1}
-perl {crest} -f {sample1}.cover -d {sample1}.rmdup.bam -g {sample2}.rmdup.bam --ref_genome {ref} -t {ref}.2bit -p {sample1}
+            outfile = """ln -s {input}/{sample1_name}.rmdup.bai {input}/{sample1_name}.rmdup.bam.bai
+perl {extractSClip} -i {sample1} --ref_genome {ref} -o {out}
+perl {crest} -f {sample1}.cover -d {sample1} -g {sample2} --ref_genome {ref} -t {ref}.2bit -o {out}
             """.format(
                 extractSClip=extractSClip,sample1=sample1,sample2=sample2,
-                crest=crest,ref=ref
+                crest=crest,ref=ref,sample1_name=sample1_name,out=out,input=input_path
             )
         elif rm_germline == "false": ## germline/common SV
-            outfile = """perl {extractSClip} -i {sample1} --ref_genome {ref} -p {sample1}
-perl {crest} -f {sample1}.cover -d {sample1} --ref_genome {ref} -t {ref}.2bit -p {sample1}""".format(
-                extractSClip=extractSClip, sample1=sample1,crest=crest,ref=ref
+            outfile = """ln -s {input}/{sample1_name}.rmdup.bai {input}/{sample1_name}.rmdup.bam.bai
+perl {extractSClip} -i {sample1} --ref_genome {ref} -o {out}
+perl {crest} -f {sample1}.cover -d {sample1} --ref_genome {ref} -t {ref}.2bit -o {out}""".format(
+                extractSClip=extractSClip, sample1=sample1,crest=crest,ref=ref,sample1_name=sample1_name,out=out,
+                input=input_path
             )
     return outfile
 def ngs_cnv(sample1, sample2, ref, outdir, tool='control-freec',species='human',stragety="WGS",rm_germline="false"):
     outfile = ''
+    sample1_name = os.path.basename(sample1).replace('.rmdup.bam', '')
+    out_name = outdir+'/'+sample1_name
     if tool == 'cnvnator':
-        bin_size = '1000'
+        bin_size = '100'  ## sequencing depth=20-30x: bin size = 100; 2-3x: 500; 100x:30
         ref_dir = os.path.dirname(ref)
-        outfile = """{cnvnator} -root {sample1}.root -tree {sample1} 
-{cnvnator} -root {sample1}.root -his {bin_size} -d {ref_dir}
-{cnvnator} -root {sample1}.root -stat {bin_size}
-{cnvnator} -root {sample1}.root -partition {bin_size}
-{cnvnator} -root {sample1}.root -call {bin_size} > {sample1}.cnv.call.txt
-perl {cnvnator2VCF} {sample1}.cnv.call.txt > {sample1}.cnv.vcf
-        """.format(cnvnator=cnvnator,sample1=sample1,ref_dir=ref_dir,cnvnator2VCF=cnvnator2VCF,bin_size=bin_size)
+        outfile = """{cnvnator} -root {out_name}.root -tree {sample1} 
+## {cnvnator} -root {out_name}.root -eval {bin_size}  # if bin size was suitable, the value of mean to segma would be 4-5
+{cnvnator} -root {out_name}.root -his {bin_size} -d {ref_dir}/split_fa
+{cnvnator} -root {out_name}.root -stat {bin_size}
+{cnvnator} -root {out_name}.root -partition {bin_size}
+{cnvnator} -root {out_name}.root -call {bin_size} > {out_name}.cnv.call.txt
+perl {cnvnator2VCF} {out_name}.cnv.call.txt > {out_name}.cnv.vcf
+        """.format(cnvnator=cnvnator,out_name=out_name,sample1=sample1,ref_dir=ref_dir,cnvnator2VCF=cnvnator2VCF,
+                   bin_size=bin_size)
+        return outfile
     elif tool == 'control-freec':
         if species == 'human':
             if stragety == "WGS":
@@ -129,13 +141,17 @@ perl {cnvnator2VCF} {sample1}.cnv.call.txt > {sample1}.cnv.vcf
                     control_data = sample2+'.rmdup.bam'
                     config_wgs_add_control=make_freec_config.modify(sample_data,control_data,ref,outdir,'human','WGS','Y')
                     outfile = """{control_freec} -conf ./config.list
-                    """.format(control_freec=control_freec)
+awk '$3!=-1 ' {sample_data}_ratio.txt > {sample_data}_ratio_noNA.txt
+cat {makeGraph} | R --slave --args 2 {sample_data}_ratio_noNA.txt
+                    """.format(control_freec=control_freec,sample_data=sample_data,makeGraph=makeGraph)
                     return config_wgs_add_control, outfile
                 elif rm_germline == "false":
                     pre = sample1.rstrip('/').split('/')[-1]
                     config_wgs_no_control=make_freec_config.modify(sample1,'',ref,outdir,'human','WGS','N')
                     outfile = """{control_freec} -conf {pre}_config_wgs_no_control.list
-                    """.format(control_freec=control_freec,pre=pre)
+awk '$3!=-1 ' {sample_data}_ratio.txt > {sample_data}_ratio_noNA.txt
+cat {makeGraph} | R --slave --args 2 {sample_data}_ratio_noNA.txt
+                    """.format(control_freec=control_freec,pre=pre,sample_data=sample_data,makeGraph=makeGraph)
                     return config_wgs_no_control, outfile
             elif stragety == "WES":
                 if rm_germline == "true":
@@ -143,13 +159,17 @@ perl {cnvnator2VCF} {sample1}.cnv.call.txt > {sample1}.cnv.vcf
                     control_data = sample2 + '.rmdup.bam'
                     config_wes_add_control = make_freec_config.modify(sample_data,control_data,ref,outdir,'human','WES','Y')
                     outfile = """{control_freec} -conf ./config.list
-                    """.format(control_freec=control_freec)
+awk '$3!=-1 ' {sample_data}_ratio.txt > {sample_data}_ratio_noNA.txt
+cat {makeGraph} | R --slave --args 2 {sample_data}_ratio_noNA.txt
+                    """.format(control_freec=control_freec,sample_data=sample_data,makeGraph=makeGraph)
                     return config_wes_add_control, outfile
                 elif rm_germline == "false":
                     pre = sample1.rstrip('/').split('/')[-1]
                     config_wes_no_control = make_freec_config.modify(sample1, '', ref,outdir,'human', 'WES', 'N')
                     outfile = """{control_freec} -conf {pre}_config_wgs_no_control.list
-                    """.format(control_freec=control_freec,pre=pre)
+awk '$3!=-1 ' {sample_data}_ratio.txt > {sample_data}_ratio_noNA.txt
+cat {makeGraph} | R --slave --args 2 {sample_data}_ratio_noNA.txt
+                    """.format(control_freec=control_freec,pre=pre,sample_data=sample_data,makeGraph=makeGraph)
                     return config_wes_no_control, outfile
         elif species == 'non-human':
             pass
