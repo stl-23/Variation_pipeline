@@ -121,30 +121,30 @@ TGS(Third generation sequencing) SV options:
 ```
 # EXAMPLES:
 ```
-    ## samtools single calling
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp samtools -mode SNP_INDEL
-    ## gatk4 single calling
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp gatk4 -mode SNP_INDEL
-    ## join calling
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools -vc join -mode SNP_INDEL
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -mode SNP_INDEL
-    ## bqsr & vqsr
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
-    ## samtools+gatk4
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools+gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
-    ## somatic SNP/Indel
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode SNP_INDEL_Somatic
-    ## somatic SNP/Indel create PON
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -np H9-AB-p113_S13_L001,H9-AB-p113_S5_L001,H9-AB-p116_S4_L001 -mode SNP_INDEL_Somatic
-    ## SV
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp breakdancer -mode SV'
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp crest -mode SV
-    ## CNV
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp cnvnator -mode CNV
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -mode CNV
-    ## somatic CNV 
-    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode CNV_Somatic
-    ## TGS SV 
-    python3 /scripts/variation/run_variation.py -i /qc/results/pacbio/DNA/ -o /variation/results/ -bv hg38 -sp tgs -mt Minimap2 -mp "--cs --MD -ax map-pb" -cp sniffles -mode SV
-    python3 /scripts/variation/run_variation.py -i /qc/results/pacbio/DNA/ -o /variation/results/ -bv hg38 -sp tgs -mt NGMLR -mp "-x pacbio" -cp sniffles -mode SV
+## samtools single calling
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp samtools -mode SNP_INDEL
+## gatk4 single calling
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp gatk4 -mode SNP_INDEL
+## join calling
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools -vc join -mode SNP_INDEL
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -mode SNP_INDEL
+## bqsr & vqsr
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
+## samtools+gatk4
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools+gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
+## somatic SNP/Indel
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode SNP_INDEL_Somatic
+## somatic SNP/Indel create PON
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -np H9-AB-p113_S13_L001,H9-AB-p113_S5_L001,H9-AB-p116_S4_L001 -mode SNP_INDEL_Somatic
+## SV
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp breakdancer -mode SV'
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp crest -mode SV
+## CNV
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp cnvnator -mode CNV
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -mode CNV
+## somatic CNV 
+python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode CNV_Somatic
+## TGS SV 
+python3 /scripts/variation/run_variation.py -i /qc/results/pacbio/DNA/ -o /variation/results/ -bv hg38 -sp tgs -mt Minimap2 -mp "--cs --MD -ax map-pb" -cp sniffles -mode SV
+python3 /scripts/variation/run_variation.py -i /qc/results/pacbio/DNA/ -o /variation/results/ -bv hg38 -sp tgs -mt NGMLR -mp "-x pacbio" -cp sniffles -mode SV
 ```
