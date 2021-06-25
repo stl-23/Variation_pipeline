@@ -9,6 +9,7 @@ docker pull stl23/variation:v1.0
 Note:ANNOVAR is used for annotation,please provide the path of ANNOVAR software.
 ```
 wget -c https://github.com/stl-23/Variation_pipelinev1.0/install_genome_data.sh
+
 sh ./install_genome_data.sh “YOUR_DATABASE_DIR” /tool/annovar
 ```
 3 Start docker image
