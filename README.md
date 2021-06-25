@@ -6,6 +6,7 @@ The common pipeline of dectecting variations:SNP/Indel/SV/CNV that combined by s
 docker pull stl23/variation:v1.0
 ```
 2. Download reference genome data (hg19,hg38) 
+
 Note:ANNOVAR is used for annotation,please provide the path of ANNOVAR software.
 ```
 wget -c https://github.com/stl-23/Variation_pipelinev1.0/install_genome_data.sh
