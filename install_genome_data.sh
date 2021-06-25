@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-if [[ "$#" -lt 1 ]]; then
+if [[ "$#" -lt 2 ]]; then
   echo
   echo "This script downloads and installs data for genomes."
   echo "Genome data files will be installed on local path ./"
@@ -7,7 +7,7 @@ if [[ "$#" -lt 1 ]]; then
   echo "Supported genomes: hg19, hg38"
   echo
   echo "Usage: ./install_genome_data.sh [GENOME]"
-  echo "  Example: ./install_genome_data.sh hg19"
+  echo "  Example: ./install_genome_data.sh hg19 /tool/annovar/"
   echo
   exit 0
 fi
