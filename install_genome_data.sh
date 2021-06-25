@@ -133,7 +133,7 @@ if [[ $GENOME == "hg19" ]]; then
   cd ../
   ## annovar
   cd ./annovar
-  perl $Annovar_path/annotate_variation.pl -buildver hg19 -downdb -webfrom annovar refGene humandb/
+  perl $Annovar_path/annotate_variation.pl -buildver hg19 -downdb -webfrom annovar refGene ./
 
 elif [[ $GENOME == "hg38" ]]; then
     ## resource
@@ -155,4 +155,4 @@ elif [[ $GENOME == "hg38" ]]; then
   cd ../
   ## annovar
   cd ./annovar
-  perl $Annovar_path/annotate_variation.pl -buildver hg38 -downdb -webfrom annovar refGene humandb/
+  perl $Annovar_path/annotate_variation.pl -buildver hg38 -downdb -webfrom annovar refGene ./
