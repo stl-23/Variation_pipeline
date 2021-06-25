@@ -43,6 +43,7 @@ if [[ $GENOME == "hg19" ]]; then
   ## bqsr resource
   known_indel="https://storage.googleapis.com/gcp-public-data--broad-references/hg19/v0/Homo_sapiens_assembly19.known_indels.vcf"
   known_indel_idx="https://storage.googleapis.com/gcp-public-data--broad-references/hg19/v0/Homo_sapiens_assembly19.known_indels.vcf.idx"
+  mkdir hg19 && cd hg19
 
 elif [[ $GENOME == "hg38" ]]; then
   #ref_fa="ftp://hgdownload.soe.ucsc.edu/goldenPath/hg38/bigZips/latest/hg38.fa.gz"
@@ -72,6 +73,7 @@ elif [[ $GENOME == "hg38" ]]; then
   interval="https://storage.googleapis.com/gcp-public-data--broad-references/hg38/v0/wgs_calling_regions.hg38.interval_list"
   known_indel="https://storage.googleapis.com/gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz"
   known_indel_idx="https://storage.googleapis.com/gcp-public-data--broad-references/hg38/v0/Homo_sapiens_assembly38.known_indels.vcf.gz.tbi"
+  mkdir hg38 && cd hg38
 fi
 
 if [[ ${ref_fa} == "" ]]; then
