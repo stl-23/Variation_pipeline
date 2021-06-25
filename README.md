@@ -4,7 +4,7 @@ The common pipeline of dectecting variations:SNP/Indel/SV/CNV that combined by s
 1. Pull our docker image from Docker Hub 
 ```
 docker pull stl23/variation:v1.0
-···
+```
 2. Download reference genome data (hg19,hg38) 
 Note:ANNOVAR is used for annotation,please provide the path of ANNOVAR software.
 ```
