@@ -4,7 +4,11 @@ The common pipeline of dectecting variations:SNP/Indel/SV/CNV that combined by s
 1. Pull our docker image from Docker Hub 
 ```
 docker pull stl23/variation:v1.0
-docker run -itd --name variationv1.0 -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output variation:v1.0 /bin/bash
+
+wget -c https://github.com/stl-23/Variation_pipelinev1.0/install_genome_data.sh
+sh install_genome_data.sh “YOUR_DATABASE_DIR” /tool/annovar
+
+docker run -itd --name variationv1.0 -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output variation:v1.0 /bin/bash
 ```
 2. Run the pipeline
 ```
