@@ -13,7 +13,7 @@ wget -c https://github.com/stl-23/Variation_pipelinev1.0/install_genome_data.sh
 
 cd “YOUR_DATABASE_DIR” && sh ./install_genome_data.sh hg38 /tool/annovar
 ```
-3 Start docker image
+3. Start docker image
 ```
 docker run -itd --name variationv1.0 -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output variation:v1.0 /bin/bash
 ```
