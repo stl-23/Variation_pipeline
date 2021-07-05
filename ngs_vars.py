@@ -54,27 +54,51 @@ rm {sample}.samtools.snp.vcf {sample}.samtools.indel.vcf """.format(
         )
     return outfile
 
-def snp_indel_gatk(ref, input, sample, gvcf, bqsr_dir):
+def snp_indel_gatk(ref, input, sample, gvcf, bqsr_dir,intervals=None,ip=0):
     outfile = ''
     if bqsr_dir:  #### BQSR (Recalibration Base Quality Score)
         lst = os.listdir(os.path.abspath(bqsr_dir))
-        known_site = ' '.join(["--known-sites "+bqsr_dir+"/"+vcf for vcf in lst if vcf.endswith('.vcf.gz')])
+        known_site = ' '.join(["--known-sites "+bqsr_dir+"/"+vcf for vcf in lst if vcf.endswith('.vcf.gz') or vcf.endswith('.vcf')])
         if gvcf == "T":
-            outfile = """{gatk4} BaseRecalibrator -R {ref} -I {input} {known_site} -O {sample}.recal.table
-{gatk4} ApplyBQSR --bqsr-recal-file {sample}.recal.table -R {ref} -I {input} -O {sample}.BQSR.bam
-{gatk4} HaplotypeCaller -R {ref} -I {sample}.BQSR.bam -ERC GVCF -O {sample}.g.vcf
-                    """.format(gatk4=gatk4, ref=ref, input=input, sample=sample, known_site=known_site)
+            outfile = """{gatk4} BaseRecalibrator -R {ref} -I {input} -L {intervals} --interval-padding {ip} {known_site} -O {sample}.recal.table
+{gatk4} ApplyBQSR -R {ref} -I {input} -L {intervals} --interval-padding {ip} --bqsr-recal-file {sample}.recal.table -O {sample}.BQSR.bam
+{gatk4} HaplotypeCaller -R {ref} -I {sample}.BQSR.bam -L {intervals} --interval-padding {ip} -ERC GVCF -O {sample}.g.vcf
+                    """.format(gatk4=gatk4,
+                               ref=ref,
+                               input=input,
+                               sample=sample,
+                               known_site=known_site,
+                               intervals=intervals,
+                               ip=ip)
 
         elif gvcf == "F":
-            outfile = """{gatk4} BaseRecalibrator -R {ref} -I {input} {known_site} -O {sample}.recal.table
-{gatk4} ApplyBQSR --bqsr-recal-file {sample}.recal.table -R {ref} -I {input} -O {sample}.BQSR.bam
-{gatk4} HaplotypeCaller -R {ref} -I {sample}.BQSR.bam -O {sample}.vcf
-                        """.format(gatk4=gatk4, ref=ref, input=input, sample=sample, known_site=known_site)
+            outfile = """{gatk4} BaseRecalibrator -R {ref} -I {input} -L {intervals} --interval-padding {ip} {known_site} -O {sample}.recal.table
+{gatk4} ApplyBQSR --bqsr-recal-file {sample}.recal.table -R {ref} -I {input} -L {intervals} --interval-padding {ip} -O {sample}.BQSR.bam
+{gatk4} HaplotypeCaller -R {ref} -I {sample}.BQSR.bam -L {intervals} --interval-padding {ip} -O {sample}.vcf
+                        """.format(gatk4=gatk4,
+                                   ref=ref,
+                                   input=input,
+                                   sample=sample,
+                                   known_site=known_site,
+                                   intervals=intervals,
+                                   ip=ip)
     elif not bqsr_dir:
         if gvcf == "T":
-            outfile = """{gatk4} HaplotypeCaller -R {ref} -I {input} -ERC GVCF -O {sample}.g.vcf""".format(gatk4=gatk4, ref=ref, input=input, sample=sample)
+            outfile = """{gatk4} HaplotypeCaller -R {ref} -I {input} -L {intervals} --interval-padding {ip} -ERC GVCF -O {sample}.g.vcf
+            """.format(gatk4=gatk4,
+                       ref=ref,
+                       input=input,
+                       sample=sample,
+                       intervals=intervals,
+                       ip=ip)
         elif gvcf == "F":
-            outfile = """{gatk4} HaplotypeCaller -R {ref} -I {input} -O {sample}.vcf""".format(gatk4=gatk4, ref=ref, input=input, sample=sample)
+            outfile = """{gatk4} HaplotypeCaller -R {ref} -I {input} -L {intervals} --interval-padding {ip} -O {sample}.vcf
+            """.format(gatk4=gatk4,
+                       ref=ref,
+                       input=input,
+                       sample=sample,
+                       intervals=intervals,
+                       ip=ip)
     return outfile
 
 def samtool_gatk_combine(sample):  ## Samtools and GATK pipelines
