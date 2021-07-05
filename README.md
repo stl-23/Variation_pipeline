@@ -32,7 +32,7 @@ variation:v1.0 bash -c 'cd /work/ && python3 /script/variation/run_variation.py 
 -cp gatk4 \
 -mode SNP_INDEL
 ```
-5 Run the shell script in yaml by k8s
+5 Run the shell script
 
 preparing...
 # Parameters
