@@ -81,7 +81,7 @@ def write_call_var():
                         print("Warning: too few samples, VQSR may be failed!")
                         cmd_vqsr = []
                         for index,sample in enumerate(path_output):
-                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir))
+                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir,interval_list,ip))
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index])) ### VQSR ###
                         for i, s in enumerate(samples):
                             with open('s2_ngs_'+s+'_gatk_bqsr_call_vqsr.sh','w') as fw:
@@ -89,7 +89,7 @@ def write_call_var():
                     elif v_calling == 'join':  ## join calling
                         cmd_vqsr = ''
                         for index, sample in enumerate(path_output):
-                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir))
+                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir,interval_list,ip))
                         for index, per_cmd in enumerate(cmd_call):
                             with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
                                 fw.write(per_cmd)
@@ -106,7 +106,7 @@ def write_call_var():
                     if v_calling == 'single':  ##  single sample calling
                         cmd_hard = []
                         for index, sample in enumerate(path_output):
-                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', bqsr_dir))
+                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', bqsr_dir,interval_list,ip))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index]+'.vcf', path_output[index]))
                         for i, s in enumerate(samples):
                             with open('s2_ngs_'+s + '_gatk_bqsr_call_hard_filter.sh', 'w') as fw:
@@ -114,7 +114,7 @@ def write_call_var():
                     elif v_calling == 'join':  ## join calling
                         cmd_hard = ''
                         for index, sample in enumerate(path_output):
-                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', bqsr_dir))
+                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', bqsr_dir,interval_list,ip))
                         for index, per_cmd in enumerate(cmd_call):
                             with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
                                 fw.write(per_cmd)
@@ -131,7 +131,7 @@ def write_call_var():
                     if v_calling == 'single':  ##  single sample calling
                         cmd_hard = []
                         for index, sample in enumerate(path_output):
-                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F', bqsr_dir))
+                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F', bqsr_dir,interval_list,ip))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index] + '.vcf', path_output[index]))
                         for i, s in enumerate(samples):
                             with open('s2_ngs_'+s + '_gatk_call_hard_filter.sh', 'w') as fw:
@@ -139,7 +139,7 @@ def write_call_var():
                     elif v_calling == 'join':  ## join calling
                         cmd_hard = ''
                         for index, sample in enumerate(path_output):
-                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', bqsr_dir))
+                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', bqsr_dir,interval_list,ip))
                         for index, per_cmd in enumerate(cmd_call):
                             with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
                                 fw.write(per_cmd)
@@ -158,7 +158,7 @@ def write_call_var():
                         print("Warning: too few samples, VQSR may be failed!")
                         cmd_vqsr = []
                         for index,sample in enumerate(path_output):
-                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir))
+                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir,interval_list,ip))
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index])) ### VQSR ###
                         for i, s in enumerate(samples):
                             with open('s2_ngs_'+s+'_gatk_call_vqsr.sh','w') as fw:
@@ -166,7 +166,7 @@ def write_call_var():
                     elif v_calling == 'join':  ## join calling
                         cmd_vqsr = ''
                         for index, sample in enumerate(path_output):
-                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir))
+                            cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir,interval_list,ip))
                         for index, per_cmd in enumerate(cmd_call):
                             with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
                                 fw.write(per_cmd)
@@ -197,28 +197,28 @@ def write_call_var():
                     ###gatk4 pipeline###
                     if bqsr_dir and vqsr_dir:  ## BQSR and VQSR
                         for index, sample in enumerate(path_output):
-                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir))
+                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir,interval_list,ip))
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index]))
                         for i, s in enumerate(samples):
                             with open('s2.1_ngs_'+s + '_gatk_bqsr_call_vqsr.sh', 'w') as fw:
                                 fw.write(cmd_gatk4_call[i] + '\n' + cmd_vqsr[i] + '\n')
                     elif bqsr_dir and not vqsr_dir: ## BQSR and Hard filtering
                         for index, sample in enumerate(path_output):
-                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', bqsr_dir))
+                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', bqsr_dir,interval_list,ip))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index] + '.vcf', path_output[index]))
                         for i, s in enumerate(samples):
                             with open('s2.1_ngs_'+s + '_gatk_call_hard_filter.sh', 'w') as fw:
                                 fw.write(cmd_gatk4_call[i] + '\n' + cmd_hard[i] + '\n')
                     elif not bqsr_dir and not vqsr_dir: ## Hard filtering only
                         for index, sample in enumerate(path_output):
-                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', bqsr_dir))
+                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', bqsr_dir,interval_list,ip))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index] + '.vcf', path_output[index]))
                         for i, s in enumerate(samples):
                             with open('s2.1_ngs_'+s + '_gatk_call_hard_filter.sh', 'w') as fw:
                                 fw.write(cmd_gatk4_call[i] + '\n' + cmd_hard[i] + '\n')
                     elif not bqsr_dir and vqsr_dir:
                         for index,sample in enumerate(path_output):
-                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir))
+                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir,interval_list,ip))
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index])) ### VQSR ###
                         for i, s in enumerate(samples):
                             with open('s2_ngs_'+s+'_gatk_call_vqsr.sh','w') as fw:
@@ -247,7 +247,7 @@ def write_call_var():
                     ###gatk4 pipeline###
                     if bqsr_dir and vqsr_dir:  ## BQSR and VQSR
                         for index, sample in enumerate(path_output):
-                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T',bqsr_dir))
+                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T',bqsr_dir,interval_list,ip))
                         for index, per_cmd in enumerate(cmd_gatk4_call):
                             with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
                                 fw.write(per_cmd)
@@ -259,7 +259,7 @@ def write_call_var():
                             fw.write(cmd_merge+'\n'+cmd_vqsr)
                     elif bqsr_dir and not vqsr_dir:  ## BQSR and Hard filtering
                         for index, sample in enumerate(path_output):
-                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input, sample, 'T', bqsr_dir))
+                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input, sample, 'T', bqsr_dir,interval_list,ip))
                         for index, per_cmd in enumerate(cmd_gatk4_call):
                             with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
                                 fw.write(per_cmd)
@@ -271,7 +271,7 @@ def write_call_var():
                             fw.write(cmd_merge + '\n' + cmd_hard)
                     elif not bqsr_dir and not vqsr_dir:  ## Hard filtering only
                         for index, sample in enumerate(path_output):
-                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', bqsr_dir))
+                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', bqsr_dir,interval_list,ip))
                         for index, per_cmd in enumerate(cmd_gatk4_call):
                             with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
                                 fw.write(per_cmd)
@@ -285,7 +285,7 @@ def write_call_var():
                             fw.write(cmd_merge + '\n' + cmd_hard)
                     elif not bqsr_dir and vqsr_dir:
                         for index, sample in enumerate(path_output):
-                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir))
+                            cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir,interval_list,ip))
                         for index, per_cmd in enumerate(cmd_gatk4_call):
                             with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
                                 fw.write(per_cmd)
@@ -475,31 +475,31 @@ def write_annotation():
 if __name__ == '__main__':
     examplelog = """EXAMPLES:
     ## samtools single calling
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp samtools -mode SNP_INDEL
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp samtools -mode SNP_INDEL
     ## gatk4 single calling
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp gatk4 -mode SNP_INDEL
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -sp ngs -sg WGS -mt BWA -cp gatk4 -mode SNP_INDEL
     ## join calling
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools -vc join -mode SNP_INDEL
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -mode SNP_INDEL
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools -vc join -mode SNP_INDEL
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -mode SNP_INDEL
     ## bqsr & vqsr
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
     ## samtools+gatk4
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools+gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp samtools+gatk4 -vc join -bqsr -vqsr -mode SNP_INDEL
     ## somatic SNP/Indel
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode SNP_INDEL_Somatic
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode SNP_INDEL_Somatic
     ## somatic SNP/Indel create PON
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -np H9-AB-p113_S13_L001,H9-AB-p113_S5_L001,H9-AB-p116_S4_L001 -mode SNP_INDEL_Somatic
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -sg WGS -mt BWA -cp gatk4 -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -np H9-AB-p113_S13_L001,H9-AB-p113_S5_L001,H9-AB-p116_S4_L001 -mode SNP_INDEL_Somatic
     ## SV
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp breakdancer -mode SV'
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp crest -mode SV
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp breakdancer -mode SV'
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sp ngs -mt BWA -cp crest -mode SV
     ## CNV
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp cnvnator -mode CNV
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -mode CNV
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp cnvnator -mode CNV
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -mode CNV
     ## somatic CNV 
-    python3 /test/scripts/variation/run_variation.py -i  /test/my_data/qc_test/results/Illumina/ -o /test/my_data/variation_test/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode CNV_Somatic
+    python3 /scripts/variation/run_variation.py -i /qc/results/Illumina/ -o /variation/results/ -bv hg38 -st PE -sg WGS -sp ngs -mt BWA -cp control-freec -tar H9-AB-p113_S2_L001 -con H9-AB-p113_S10_L001 -mode CNV_Somatic
     ## TGS SV 
-    python3 /test/scripts/variation/run_variation.py -i /test/my_data/qc_test/results/pacbio/DNA/ -o /test/my_data/variation_test/results/ -bv hg38 -sp tgs -mt Minimap2 -mp "--cs --MD -ax map-pb" -cp sniffles -mode SV
-    python3 /test/scripts/variation/run_variation.py -i /test/my_data/qc_test/results/pacbio/DNA/ -o /test/my_data/variation_test/results/ -bv hg38 -sp tgs -mt NGMLR -mp "-x pacbio" -cp sniffles -mode SV
+    python3 /scripts/variation/run_variation.py -i /qc/results/pacbio/DNA/ -o /variation/results/ -bv hg38 -sp tgs -mt Minimap2 -mp "--cs --MD -ax map-pb" -cp sniffles -mode SV
+    python3 /scripts/variation/run_variation.py -i /qc/results/pacbio/DNA/ -o /variation/results/ -bv hg38 -sp tgs -mt NGMLR -mp "-x pacbio" -cp sniffles -mode SV
     """
     parser = argparse.ArgumentParser(description='Variation pipeline v1.0',
                                      epilog=examplelog,
@@ -521,6 +521,7 @@ if __name__ == '__main__':
                          help='The maximum JAVA memory in the pipeline')
     general.add_argument('-mc','--max_thread',type=int,default=12,
                          help='The maximum Java theads for GATK GenomicsDBImport')
+    general.add_argument('--script',type=str,default='T',choices=['T', 'F'])
     mapref = parser.add_argument_group(title='Mapping options')
     mapref.add_argument('-sp', '--seq_platform',type=str, default='ngs',choices=['ngs','tgs'],
                         help='Reads sequencing platform, ngs for illumina short reads; tgs for Pacbio or ONT long reads')
@@ -554,6 +555,10 @@ if __name__ == '__main__':
     mutation.add_argument('-vc','--variation_calling', type=str,default='single',choices=['single','join'],
                            help='Calling a group of samples together(join calling) or Variant calling with a single \
                            sample only(single sample calling), default is single')  ### https://bcbio.wordpress.com/2014/10/07/joint-calling/
+    mutation.add_argument('--interval',type=str,default='',
+                         help='The interval file')
+    mutation.add_argument('--interval_padding',type=int,default=0,
+                          help="The interval padding")
     somatic = parser.add_argument_group(title='Somatic mutation options')
     somatic.add_argument('-tar', '--target',type=str,
                           help='The target(case/tumor/disease) sample name')
@@ -570,8 +575,7 @@ if __name__ == '__main__':
                           help='The GATK4 af-of-alleles-not-in-resource parameter in Mutect2,\
                           The default of 0.001 is appropriate for human sample analyses without any population resource.'
                                )
-    somatic.add_argument('--interval',type=str,default='',
-                         help='The interval file')
+
     tgs = parser.add_argument_group(title='TGS(Third generation sequencing) SV options')
     tgs.add_argument('--sniffles_parameters',type=str,default='-s 1 -d 600 --genotype --cluster --ccs_reads',
                           help='The sniffles parameters for SV calling. ')
@@ -604,7 +608,8 @@ if __name__ == '__main__':
     sniffles_p = args.sniffles_parameters.strip('"')
     bcftools_filter = args.bcftools_filter.strip('"')
     interval = args.interval
-
+    ip = args.interval_padding
+    script = args.script
 ### check arguments ###
     index_shell = os.path.abspath(os.path.dirname(__file__))+'/vartools/index.sh'
     statistics_shell = os.path.abspath(os.path.dirname(__file__))+'/vartools/statistics.sh'
@@ -621,11 +626,18 @@ if __name__ == '__main__':
             if vqsr_dir:
                 vqsr_dir = os.path.join(genomicsdb,'vqsr_resource/')
             if not interval:
-                interval_list = prefix + '.interval_list'
+                if strategy == 'WGS':
+                    interval_list = prefix + '.interval_list'
+                elif strategy == 'WES':
+                    interval_list = prefix + '.bed'
+                    ip = 100
             if not germline:
-                germline = os.path.join(genomicsdb,'pon_and_germline','somatic-hg19_af-only-gnomad.hg19.vcf.gz')
+                germline = os.path.join(genomicsdb,'pon_and_germline','somatic-b37_af-only-gnomad.raw.sites.vcf')
             if not (pon or normal_samples_for_pon):
-                pon = os.path.join(genomicsdb,'pon_and_germline','somatic-hg19_1000g_pon.hg19.vcf.gz')
+                if strategy == 'WGS':
+                    pon = os.path.join(genomicsdb,'pon_and_germline','somatic-b37_Mutect2-WGS-panel-b37.vcf')
+                elif strategy == 'WES':
+                    pon = os.path.join(genomicsdb, 'pon_and_germline', 'somatic-b37_Mutect2-exome-panel.vcf')
             elif pon and normal_samples_for_pon:
                 print('Warning: parameters -pon and -np were used at the same time, prefer use the PON file first')
                 normal_samples_for_pon = ''
@@ -641,7 +653,11 @@ if __name__ == '__main__':
             if vqsr_dir:
                 vqsr_dir = os.path.join(genomicsdb,'vqsr_resource/')
             if not interval:
-                interval_list = prefix + '.interval_list'
+                if strategy == 'WGS':
+                    interval_list = prefix + '.interval_list'
+                elif strategy == 'WES':
+                    interval_list = prefix + '.bed'
+                    ip = 100
             if not germline:
                 germline = os.path.join(genomicsdb,'pon_and_germline','somatic-hg38_af-only-gnomad.hg38.vcf.gz')
             if not (pon or normal_samples_for_pon):
@@ -649,11 +665,6 @@ if __name__ == '__main__':
             elif pon and normal_samples_for_pon:
                 print('Warning: parameters -pon and -np were used at the same time, prefer use the PON file first')
                 normal_samples_for_pon = ''
-       # else:
-       #     genomicsdb = os.path.join(os.path.abspath(inputs_dir), 'genomicsdb/{0}/'.format(buildver))
-       #     ref = os.path.join(genomicsdb,'{}.fa'.format(buildver))
-       #     gff3 = os.path.join(genomicsdb, '{}.gff'.format(buildver))
-       #    chr_list = os.path.join(os.path.abspath(inputs_dir), '{0}_chr.list'.format(buildver))
 
     elif not buildver and (ref and gff3):
         prefix = os.path.splitext(os.path.basename(os.path.abspath(ref)))[0]
@@ -664,6 +675,8 @@ if __name__ == '__main__':
             ref = prefix+'.fa'
             gff3 = prefix+'.gff3'
         if mode == 'SNP_INDEL_Somatic' and not interval:
+            raise Exception('Error: no interval file provided')
+        if strategy and not interval:
             raise Exception('Error: no interval file provided')
 
     elif buildver and (ref or gff3):
@@ -697,9 +710,16 @@ if __name__ == '__main__':
         if maptool == 'Minimap2' or maptool == 'NGMLR':
             print('Warning: BWA is used to map short reads in this pipeline,note the format if use minimap2 or NGMLR')
 
-    write_mapping()
-    write_call_var()
-    write_annotation()
+### run the pipline
+    if script == 'T':
+        write_mapping()
+        write_call_var()
+        write_annotation()
+    elif script == 'F':
+        ## mapping
+        print('step1: mapping to the reference genome')
+        pass
+
 
 
 
