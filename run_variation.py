@@ -2,13 +2,28 @@
 import os
 import argparse
 import subprocess
+from multiprocessing.dummy import Pool as ThreadPool
 import mapping
 import ngs_vars
 import tgs_vars
 import annotation
-from vartools import parsering, merge_vcf_gvcf,variation_qc,somatic_detection
+from vartools import parsering, merge_vcf_gvcf, variation_qc, somatic_detection
 
-def write_mapping():
+def process(cmd):
+    subprocess.check_call(cmd,shell=True)
+
+def run(func,cmds,jobs,maxc):
+    ## split command into sub-commands,
+    ## each sub-command has {jobs} tasks
+    ## run {jobs} tasks parallelly to save time
+    for i in range(0, len(cmds), jobs):
+        subcmds = cmds[i:i + jobs]
+        pool = ThreadPool(maxc)
+        pool.map(func, subcmds)
+        pool.close()
+        pool.join()
+
+def run_mapping(script,jobs):
     input_path = os.path.abspath(inputs_dir) + '/'
     out_path = os.path.join(os.path.abspath(outputs_dir), 'mapping_results/')
     subprocess.check_call(['mkdir', '-p', '{0}'.format(out_path)])
@@ -21,26 +36,36 @@ def write_mapping():
         samples = parsering.parse_short_read_dir(input_path, out_path, seqtype)[0]
         samples = list(samples)
         outfile = mapping.Ngs(maptool, input_path, out_path,prefix,maptool_parameters,seqtype).ngs()
-        for i,s in enumerate(outfile):
-            with open('s1_ngs_'+samples[i]+'.bwa.sh','w') as fw:
-                fw.write(s)
+        if script == 'T':
+            for i,s in enumerate(outfile):
+                with open('s1_ngs_'+samples[i]+'.bwa.sh','w') as fw:
+                    fw.write(s)
+        else:
+            run(process,outfile,jobs,maxc)
 
     elif platform == 'tgs':
         samples = parsering.parse_long_read_dir(input_path)[0]
         samples = list(samples)
         if maptool == 'Minimap2':
             outfile = mapping.Tgs(maptool,input_path,out_path,ref,maptool_parameters).tgs_minimap2()
-            for i,s in enumerate(outfile):
-                with open('s1_tgs_'+samples[i]+'.minimap2.sh','w') as fw:
-                    fw.write(s)
+            if script == 'T':
+                for i,s in enumerate(outfile):
+                    with open('s1_tgs_'+samples[i]+'.minimap2.sh','w') as fw:
+                        fw.write(s)
+            else:
+                run(process, outfile, jobs, maxc)
+
         elif maptool == 'NGMLR':
             outfile = mapping.Tgs(maptool,input_path,out_path,ref,maptool_parameters).tgs_ngmlr()
-            for i,s in enumerate(outfile):
-                with open('s1_tgs_'+samples[i]+'.ngmlr.sh','w') as fw:
-                    fw.write(s)
+            if script == 'T':
+                for i,s in enumerate(outfile):
+                    with open('s1_tgs_'+samples[i]+'.ngmlr.sh','w') as fw:
+                        fw.write(s)
+            else:
+                run(process, outfile, jobs, maxc)
 
 
-def write_call_var():
+def run_call_var(script,jobs):
     input_path = os.path.join(os.path.abspath(outputs_dir), 'mapping_results/')
     out_path = os.path.join(os.path.abspath(outputs_dir), 'var_results/')
     tmp_dir = os.path.join(os.path.abspath(outputs_dir), 'tmp_dir/')
@@ -63,16 +88,23 @@ def write_call_var():
                     for index,sample in enumerate(path_output):
                         cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample, v_calling,
                                                                     bcftools_filter))
-                    for index, per_cmd in enumerate(cmd_call):
-                        with open('s2_ngs_'+samples[index]+'_samtools_call.sh','w') as fw:
-                            fw.write(per_cmd)
+                    if script == 'T':
+                        for index, per_cmd in enumerate(cmd_call):
+                            with open('s2_ngs_'+samples[index]+'_samtools_call.sh','w') as fw:
+                                fw.write(per_cmd)
+                    else:
+                        run(process, cmd_call, jobs, maxc)
+
                 elif v_calling == 'join': ## join calling
                     out_name = out_path+'all_samples'
                     cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input, out_name, v_calling,
                                                                 bcftools_filter
                                                                 ))
-                    with open('s2_ngs_all_samples_samtools_call.sh','w') as fw:
-                        fw.write(cmd_call[0])
+                    if script == 'T':
+                        with open('s2_ngs_all_samples_samtools_call.sh','w') as fw:
+                            fw.write(cmd_call[0])
+                    else:
+                        run(process, cmd_call, 1, maxc)
             elif callpipe == 'gatk4':
                 if bqsr_dir and vqsr_dir: ## BQSR and VQSR
                     cmd_call = []
@@ -83,22 +115,36 @@ def write_call_var():
                         for index,sample in enumerate(path_output):
                             cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir,interval_list,ip))
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index])) ### VQSR ###
-                        for i, s in enumerate(samples):
-                            with open('s2_ngs_'+s+'_gatk_bqsr_call_vqsr.sh','w') as fw:
-                                fw.write(cmd_call[i]+'\n'+cmd_vqsr[i]+'\n')
+                        if script == 'T':
+                            for i, s in enumerate(samples):
+                                with open('s2_ngs_'+s+'_gatk_bqsr_call_vqsr.sh','w') as fw:
+                                    fw.write(cmd_call[i]+'\n'+cmd_vqsr[i]+'\n')
+                        else:
+                            run(process, cmd_call, jobs, maxc)
+                            run(process, cmd_vqsr, jobs, maxc)
+
                     elif v_calling == 'join':  ## join calling
                         cmd_vqsr = ''
                         for index, sample in enumerate(path_output):
                             cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir,interval_list,ip))
-                        for index, per_cmd in enumerate(cmd_call):
-                            with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
-                                fw.write(per_cmd)
+                        if script == 'T':
+                            for index, per_cmd in enumerate(cmd_call):
+                                with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
+                                    fw.write(per_cmd)
+                        else:
+                            run(process, cmd_call, jobs, maxc)
+
                         files_g_vcf = [i+'.g.vcf' for i in path_output]
                         cmd_merge = merge_vcf_gvcf.merge(files_g_vcf,'gvcf',out_path+'all_samples',
                                                             maxm,ref,genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir)
                         cmd_vqsr = variation_qc.vqsr(ref,out_path+'all_samples.combined.vcf',vqsr_dir,out_path+"all_samples")
-                        with open('s2.2_ngs_gatk_bqsr_merge_vqsr.sh','w') as fw:
-                            fw.write(cmd_merge+'\n'+cmd_vqsr)
+                        if script == 'T':
+                            with open('s2.2_ngs_gatk_bqsr_merge_vqsr.sh','w') as fw:
+                                fw.write(cmd_merge+'\n'+cmd_vqsr)
+                        else:
+                            run(process, cmd_merge, jobs, maxc)
+                            run(process, cmd_vqsr, jobs, maxc)
+
 
                 elif bqsr_dir and not vqsr_dir: ## BQSR and Hard filtering
                     cmd_call = []
@@ -108,22 +154,35 @@ def write_call_var():
                         for index, sample in enumerate(path_output):
                             cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', bqsr_dir,interval_list,ip))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index]+'.vcf', path_output[index]))
-                        for i, s in enumerate(samples):
-                            with open('s2_ngs_'+s + '_gatk_bqsr_call_hard_filter.sh', 'w') as fw:
-                                fw.write(cmd_call[i] + '\n' + cmd_hard[i] + '\n')
+                        if script == 'T':
+                            for i, s in enumerate(samples):
+                                with open('s2_ngs_'+s + '_gatk_bqsr_call_hard_filter.sh', 'w') as fw:
+                                    fw.write(cmd_call[i] + '\n' + cmd_hard[i] + '\n')
+                        else:
+                            run(process, cmd_call, jobs, maxc)
+                            run(process, cmd_hard, jobs, maxc)
+
                     elif v_calling == 'join':  ## join calling
                         cmd_hard = ''
                         for index, sample in enumerate(path_output):
                             cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', bqsr_dir,interval_list,ip))
-                        for index, per_cmd in enumerate(cmd_call):
-                            with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
-                                fw.write(per_cmd)
+                        if script == 'T':
+                            for index, per_cmd in enumerate(cmd_call):
+                                with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
+                                    fw.write(per_cmd)
+                        else:
+                            run(process, cmd_call, jobs, maxc)
+
                         files_g_vcf = [i + '.g.vcf' for i in path_output]
                         cmd_merge = merge_vcf_gvcf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
                                                     maxm, ref, genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir)
                         cmd_hard = variation_qc.hard_filter(ref, out_path + 'all_samples.combined.vcf', out_path + "all_samples")
-                        with open('s2.2_ngs_gatk_bqsr_merge_hard_filter.sh', 'w') as fw:
-                            fw.write(cmd_merge + '\n' + cmd_hard)
+                        if script == 'T':
+                            with open('s2.2_ngs_gatk_bqsr_merge_hard_filter.sh', 'w') as fw:
+                                fw.write(cmd_merge + '\n' + cmd_hard)
+                        else:
+                            run(process, cmd_merge, jobs, maxc)
+                            run(process, cmd_hard, jobs, maxc)
 
                 elif not bqsr_dir and not vqsr_dir: ## Hard filtering only
                     cmd_call = []
@@ -133,24 +192,38 @@ def write_call_var():
                         for index, sample in enumerate(path_output):
                             cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F', bqsr_dir,interval_list,ip))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index] + '.vcf', path_output[index]))
-                        for i, s in enumerate(samples):
-                            with open('s2_ngs_'+s + '_gatk_call_hard_filter.sh', 'w') as fw:
-                                fw.write(cmd_call[i] + '\n' + cmd_hard[i] + '\n')
+                        if script == 'T':
+                            for i, s in enumerate(samples):
+                                with open('s2_ngs_'+s + '_gatk_call_hard_filter.sh', 'w') as fw:
+                                    fw.write(cmd_call[i] + '\n' + cmd_hard[i] + '\n')
+                        else:
+                            run(process, cmd_call, jobs, maxc)
+                            run(process, cmd_hard, jobs, maxc)
+
                     elif v_calling == 'join':  ## join calling
                         cmd_hard = ''
                         for index, sample in enumerate(path_output):
                             cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', bqsr_dir,interval_list,ip))
-                        for index, per_cmd in enumerate(cmd_call):
-                            with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
-                                fw.write(per_cmd)
+                        if script == 'T':
+                            for index, per_cmd in enumerate(cmd_call):
+                                with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
+                                    fw.write(per_cmd)
+                        else:
+                            run(process, cmd_call, jobs, maxc)
+
                         files_g_vcf = [i + '.g.vcf' for i in path_output]
 
                         cmd_merge = merge_vcf_gvcf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
                                                          maxm, ref, genomicsdb, chr_list, 1, 'map_file.list', 1, 26,tmp_dir)
                         cmd_hard = variation_qc.hard_filter(ref, out_path + 'all_samples.combined.vcf',
                                                             out_path + "all_samples")
-                        with open('s2.2_ngs_gatk_merge_hard_filter.sh', 'w') as fw:
-                            fw.write(cmd_merge + '\n' + cmd_hard)
+                        if script == 'T':
+                            with open('s2.2_ngs_gatk_merge_hard_filter.sh', 'w') as fw:
+                                fw.write(cmd_merge + '\n' + cmd_hard)
+                        else:
+                            run(process, cmd_merge, jobs, maxc)
+                            run(process, cmd_hard, jobs, maxc)
+
                 elif not bqsr_dir and vqsr_dir:
                     cmd_call = []
                     cmd_merge = ''
@@ -160,22 +233,35 @@ def write_call_var():
                         for index,sample in enumerate(path_output):
                             cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir,interval_list,ip))
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index])) ### VQSR ###
-                        for i, s in enumerate(samples):
-                            with open('s2_ngs_'+s+'_gatk_call_vqsr.sh','w') as fw:
-                                fw.write(cmd_call[i]+'\n'+cmd_vqsr[i]+'\n')
+                        if script == 'T':
+                            for i, s in enumerate(samples):
+                                with open('s2_ngs_'+s+'_gatk_call_vqsr.sh','w') as fw:
+                                    fw.write(cmd_call[i]+'\n'+cmd_vqsr[i]+'\n')
+                        else:
+                            run(process, cmd_call, jobs, maxc)
+                            run(process, cmd_vqsr, jobs, maxc)
+
                     elif v_calling == 'join':  ## join calling
                         cmd_vqsr = ''
                         for index, sample in enumerate(path_output):
                             cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir,interval_list,ip))
-                        for index, per_cmd in enumerate(cmd_call):
-                            with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
-                                fw.write(per_cmd)
+                        if script == 'T':
+                            for index, per_cmd in enumerate(cmd_call):
+                                with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
+                                    fw.write(per_cmd)
+                        else:
+                            run(process, cmd_call, jobs, maxc)
+
                         files_g_vcf = [i+'.g.vcf' for i in path_output]
                         cmd_merge = merge_vcf_gvcf.merge(files_g_vcf,'gvcf',out_path+'all_samples',
                                                             maxm,ref,genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir)
                         cmd_vqsr = variation_qc.vqsr(ref,out_path+'all_samples.combined.vcf',vqsr_dir,out_path+"all_samples")
-                        with open('s2.2_ngs_gatk_merge_vqsr.sh','w') as fw:
-                            fw.write(cmd_merge+'\n'+cmd_vqsr)
+                        if script == 'T':
+                            with open('s2.2_ngs_gatk_merge_vqsr.sh','w') as fw:
+                                fw.write(cmd_merge+'\n'+cmd_vqsr)
+                        else:
+                            run(process, cmd_merge, jobs, maxc)
+                            run(process, cmd_vqsr, jobs, maxc)
 
 
 
@@ -191,45 +277,66 @@ def write_call_var():
                         cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample,v_calling,
                                                                              bcftools_filter
                                                                              ))
-                    for index, per_cmd in enumerate(cmd_samtools_call):
-                        with open('s2.1_ngs_'+samples[index]+'_samtools_call.sh','w') as fw:
-                            fw.write(per_cmd)
+                    if script == 'T':
+                        for index, per_cmd in enumerate(cmd_samtools_call):
+                            with open('s2.1_ngs_'+samples[index]+'_samtools_call.sh','w') as fw:
+                                fw.write(per_cmd)
+                    else:
+                        run(process, cmd_samtools_call, jobs, maxc)
                     ###gatk4 pipeline###
                     if bqsr_dir and vqsr_dir:  ## BQSR and VQSR
                         for index, sample in enumerate(path_output):
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir,interval_list,ip))
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index]))
-                        for i, s in enumerate(samples):
-                            with open('s2.1_ngs_'+s + '_gatk_bqsr_call_vqsr.sh', 'w') as fw:
-                                fw.write(cmd_gatk4_call[i] + '\n' + cmd_vqsr[i] + '\n')
+                        if script == 'T':
+                            for i, s in enumerate(samples):
+                                with open('s2.1_ngs_'+s + '_gatk_bqsr_call_vqsr.sh', 'w') as fw:
+                                    fw.write(cmd_gatk4_call[i] + '\n' + cmd_vqsr[i] + '\n')
+                        else:
+                            run(process, cmd_gatk4_call, jobs, maxc)
+                            run(process, cmd_vqsr, jobs, maxc)
                     elif bqsr_dir and not vqsr_dir: ## BQSR and Hard filtering
                         for index, sample in enumerate(path_output):
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', bqsr_dir,interval_list,ip))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index] + '.vcf', path_output[index]))
-                        for i, s in enumerate(samples):
-                            with open('s2.1_ngs_'+s + '_gatk_call_hard_filter.sh', 'w') as fw:
-                                fw.write(cmd_gatk4_call[i] + '\n' + cmd_hard[i] + '\n')
+                        if script == 'T':
+                            for i, s in enumerate(samples):
+                                with open('s2.1_ngs_'+s + '_gatk_call_hard_filter.sh', 'w') as fw:
+                                    fw.write(cmd_gatk4_call[i] + '\n' + cmd_hard[i] + '\n')
+                        else:
+                            run(process, cmd_gatk4_call, jobs, maxc)
+                            run(process, cmd_hard, jobs, maxc)
                     elif not bqsr_dir and not vqsr_dir: ## Hard filtering only
                         for index, sample in enumerate(path_output):
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'F', bqsr_dir,interval_list,ip))
                             cmd_hard.append(variation_qc.hard_filter(ref, path_output[index] + '.vcf', path_output[index]))
-                        for i, s in enumerate(samples):
-                            with open('s2.1_ngs_'+s + '_gatk_call_hard_filter.sh', 'w') as fw:
-                                fw.write(cmd_gatk4_call[i] + '\n' + cmd_hard[i] + '\n')
+                        if script == 'T':
+                            for i, s in enumerate(samples):
+                                with open('s2.1_ngs_'+s + '_gatk_call_hard_filter.sh', 'w') as fw:
+                                    fw.write(cmd_gatk4_call[i] + '\n' + cmd_hard[i] + '\n')
+                        else:
+                            run(process, cmd_gatk4_call, jobs, maxc)
+                            run(process, cmd_hard, jobs, maxc)
                     elif not bqsr_dir and vqsr_dir:
                         for index,sample in enumerate(path_output):
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'F',bqsr_dir,interval_list,ip))
                             cmd_vqsr.append(variation_qc.vqsr(ref,path_output[index]+'.vcf',vqsr_dir,path_output[index])) ### VQSR ###
-                        for i, s in enumerate(samples):
-                            with open('s2_ngs_'+s+'_gatk_call_vqsr.sh','w') as fw:
-                                fw.write(cmd_gatk4_call[i]+'\n'+cmd_vqsr[i]+'\n')
+                        if script == 'T':
+                            for i, s in enumerate(samples):
+                                with open('s2_ngs_'+s+'_gatk_call_vqsr.sh','w') as fw:
+                                    fw.write(cmd_gatk4_call[i]+'\n'+cmd_vqsr[i]+'\n')
+                        else:
+                            run(process, cmd_gatk4_call, jobs, maxc)
+                            run(process, cmd_vqsr, jobs, maxc)
                     ###combine pipeline###
                     for index, sample in enumerate(path_output):
                         cmd_combine.append(ngs_vars.samtool_gatk_combine(path_output[index]))
-
-                    for i, s in enumerate(samples):
-                        with open('s2.2_ngs_'+s + '_combine.sh', 'w') as fw:
-                            fw.write(cmd_combine[i] + '\n')
+                    if script == 'T':
+                        for i, s in enumerate(samples):
+                            with open('s2.2_ngs_'+s + '_combine.sh', 'w') as fw:
+                                fw.write(cmd_combine[i] + '\n')
+                    else:
+                        run(process, cmd_combine, jobs, maxc)
 
                 elif v_calling == 'join':  ## join calling
                     cmd_samtools_call = []
@@ -242,89 +349,132 @@ def write_call_var():
                     out_name = out_path + 'all_samples'
                     cmd_samtools_call.append(ngs_vars.snp_indel_samtools(ref, path_input, out_name, v_calling,
                                                                          bcftools_filter))
-                    with open('s2.1_ngs_all_samples_samtools_call.sh', 'w') as fw:
-                        fw.write(cmd_samtools_call[0])
+                    if script == 'T':
+                        with open('s2.1_ngs_all_samples_samtools_call.sh', 'w') as fw:
+                            fw.write(cmd_samtools_call[0])
+                    else:
+                        run(process, cmd_samtools_call, jobs, maxc)
                     ###gatk4 pipeline###
                     if bqsr_dir and vqsr_dir:  ## BQSR and VQSR
                         for index, sample in enumerate(path_output):
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T',bqsr_dir,interval_list,ip))
-                        for index, per_cmd in enumerate(cmd_gatk4_call):
-                            with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
-                                fw.write(per_cmd)
+                        if script == 'T':
+                            for index, per_cmd in enumerate(cmd_gatk4_call):
+                                with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
+                                    fw.write(per_cmd)
+                        else:
+                            run(process, cmd_gatk4_call, jobs, maxc)
                         files_g_vcf = [i+'.g.vcf' for i in path_output]
                         cmd_merge = merge_vcf_gvcf.merge(files_g_vcf,'gvcf',out_path+'all_samples',
                                                             maxm,ref,genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir)
                         cmd_vqsr = variation_qc.vqsr(ref,out_path+'all_samples.combined.vcf',vqsr_dir,out_path+"all_samples")
-                        with open('s2.2_ngs_gatk_bqsr_merge_vqsr.sh','w') as fw:
-                            fw.write(cmd_merge+'\n'+cmd_vqsr)
+                        if script == 'T':
+                            with open('s2.2_ngs_gatk_bqsr_merge_vqsr.sh','w') as fw:
+                                fw.write(cmd_merge+'\n'+cmd_vqsr)
+                        else:
+                            run(process, cmd_merge, jobs, maxc)
+                            run(process, cmd_vqsr, jobs, maxc)
                     elif bqsr_dir and not vqsr_dir:  ## BQSR and Hard filtering
                         for index, sample in enumerate(path_output):
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input, sample, 'T', bqsr_dir,interval_list,ip))
-                        for index, per_cmd in enumerate(cmd_gatk4_call):
-                            with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
-                                fw.write(per_cmd)
+                        if script == 'T':
+                            for index, per_cmd in enumerate(cmd_gatk4_call):
+                                with open('s2.1_ngs_'+samples[index] + '_gatk_bqsr_call.sh', 'w') as fw:
+                                    fw.write(per_cmd)
+                        else:
+                            run(process, cmd_gatk4_call, jobs, maxc)
                         files_g_vcf = [i + '.g.vcf' for i in path_output]
                         cmd_merge = merge_vcf_gvcf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
                                                     maxm, ref, genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir)
                         cmd_hard = variation_qc.hard_filter(ref, out_path + 'all_samples.combined.vcf', out_path + "all_samples")
-                        with open('s2.2_ngs_gatk_bqsr_merge_hard_filter.sh', 'w') as fw:
-                            fw.write(cmd_merge + '\n' + cmd_hard)
+                        if script == 'T':
+                            with open('s2.2_ngs_gatk_bqsr_merge_hard_filter.sh', 'w') as fw:
+                                fw.write(cmd_merge + '\n' + cmd_hard)
+                        else:
+                            run(process, cmd_merge, jobs, maxc)
+                            run(process, cmd_hard, jobs, maxc)
                     elif not bqsr_dir and not vqsr_dir:  ## Hard filtering only
                         for index, sample in enumerate(path_output):
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample, 'T', bqsr_dir,interval_list,ip))
-                        for index, per_cmd in enumerate(cmd_gatk4_call):
-                            with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
-                                fw.write(per_cmd)
+                        if script == 'T':
+                            for index, per_cmd in enumerate(cmd_gatk4_call):
+                                with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
+                                    fw.write(per_cmd)
+                        else:
+                            run(process, cmd_gatk4_call, jobs, maxc)
+
                         files_g_vcf = [i + '.g.vcf' for i in path_output]
                         cmd_merge = merge_vcf_gvcf.merge(files_g_vcf, 'gvcf', out_path + 'all_samples',
                                                          maxm, ref, genomicsdb, chr_list, 1, 'map_file.list', 1, 26,
                                                           tmp_dir)
                         cmd_hard = variation_qc.hard_filter(ref, out_path + 'all_samples.combined.vcf',
                                                             out_path + "all_samples")
-                        with open('s2.2_ngs_gatk_merge_hard_filter.sh', 'w') as fw:
-                            fw.write(cmd_merge + '\n' + cmd_hard)
+                        if script == 'T':
+                            with open('s2.2_ngs_gatk_merge_hard_filter.sh', 'w') as fw:
+                                fw.write(cmd_merge + '\n' + cmd_hard)
+                        else:
+                            run(process, cmd_merge, jobs, maxc)
+                            run(process, cmd_hard, jobs, maxc)
                     elif not bqsr_dir and vqsr_dir:
                         for index, sample in enumerate(path_output):
                             cmd_gatk4_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir,interval_list,ip))
-                        for index, per_cmd in enumerate(cmd_gatk4_call):
-                            with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
-                                fw.write(per_cmd)
+                        if script == 'T':
+                            for index, per_cmd in enumerate(cmd_gatk4_call):
+                                with open('s2.1_ngs_'+samples[index] + '_gatk_call.sh', 'w') as fw:
+                                    fw.write(per_cmd)
+                        else:
+                            run(process, cmd_gatk4_call, jobs, maxc)
                         files_g_vcf = [i+'.g.vcf' for i in path_output]
                         cmd_merge = merge_vcf_gvcf.merge(files_g_vcf,'gvcf',out_path+'all_samples',
                                                             maxm,ref,genomicsdb, chr_list, 1, 'map_file.list', 1, 26, tmp_dir)
                         cmd_vqsr = variation_qc.vqsr(ref,out_path+'all_samples.combined.vcf',vqsr_dir,out_path+"all_samples")
-                        with open('s2.2_ngs_gatk_merge_vqsr.sh','w') as fw:
-                            fw.write(cmd_merge+'\n'+cmd_vqsr)
+                        if script == 'T':
+                            with open('s2.2_ngs_gatk_merge_vqsr.sh','w') as fw:
+                                fw.write(cmd_merge+'\n'+cmd_vqsr)
+                        else:
+                            run(process, cmd_merge, jobs, maxc)
+                            run(process, cmd_vqsr, jobs, maxc)
                     ###combine pipeline###
                     cmd_combine = ngs_vars.samtool_gatk_combine(out_path+'all_samples')
-                    with open('s2.3_ngs_combine.sh', 'w') as fw:
-                        fw.write(cmd_combine)
-
+                    if script == 'T':
+                        with open('s2.3_ngs_combine.sh', 'w') as fw:
+                            fw.write(cmd_combine)
+                    else:
+                        run(process, cmd_combine, jobs, maxc)
 
         elif mode == 'SV':
             if callpipe == 'breakdancer':
                 sv_cmd = []
                 for index,sample in enumerate(path_input):
                     sv_cmd.append(ngs_vars.ngs_sv(sample,'',ref,path_output[index],'breakdancer','false'))
-                for index,per_cmd in enumerate(sv_cmd):
-                    with open('s2_ngs_'+samples[index] + '_breakdancer_sv.sh', 'w') as fw:
-                        fw.write(per_cmd)
+                if script == 'T':
+                    for index,per_cmd in enumerate(sv_cmd):
+                        with open('s2_ngs_'+samples[index] + '_breakdancer_sv.sh', 'w') as fw:
+                            fw.write(per_cmd)
+                else:
+                    run(process, sv_cmd, jobs, maxc)
             elif callpipe == 'crest':
                 sv_cmd = []
                 for index,sample in enumerate(path_input):
                     sv_cmd.append(ngs_vars.ngs_sv(sample,'',ref,path_output[index],'crest','false'))
-                for index, per_cmd in enumerate(sv_cmd):
-                    with open('s2_ngs_'+samples[index] + '_crest_sv.sh', 'w') as fw:
-                        fw.write(per_cmd)
+                if script == 'T':
+                    for index, per_cmd in enumerate(sv_cmd):
+                        with open('s2_ngs_'+samples[index] + '_crest_sv.sh', 'w') as fw:
+                            fw.write(per_cmd)
+                else:
+                    run(process, sv_cmd, jobs, maxc)
 
         elif mode == 'CNV':
             if callpipe == 'cnvnator':
                 cnv_cmd = []
                 for index, sample in enumerate(path_input):
                     cnv_cmd.append(ngs_vars.ngs_cnv(sample,'',ref,out_path,'cnvnator','human',strategy,'false'))
-                for index, per_cmd in enumerate(cnv_cmd):
-                    with open('s2_ngs_'+samples[index] + '_cnvnator.sh','w') as fw:
-                        fw.write(per_cmd)
+                if script == 'T':
+                    for index, per_cmd in enumerate(cnv_cmd):
+                        with open('s2_ngs_'+samples[index] + '_cnvnator.sh','w') as fw:
+                            fw.write(per_cmd)
+                else:
+                    run(process, cnv_cmd, jobs, maxc)
             elif callpipe == 'control-freec':
                 cnv_cmd = []
                 for sample in path_input:
@@ -333,9 +483,12 @@ def write_call_var():
                     with open(pre + '_config_wgs_no_control.list', 'w') as fw:
                         fw.write(make_conf)
                     cnv_cmd.append(ngs_vars.ngs_cnv(sample,'',ref,out_path,'control-freec','human',strategy,'false')[1])
-                for index, per_cmd in enumerate(cnv_cmd):
-                    with open('s2_ngs_'+samples[index] + '_control_freec.sh','w') as fw:
-                        fw.write(per_cmd)
+                if script == 'T':
+                    for index, per_cmd in enumerate(cnv_cmd):
+                        with open('s2_ngs_'+samples[index] + '_control_freec.sh','w') as fw:
+                            fw.write(per_cmd)
+                else:
+                    run(process, cnv_cmd, jobs, maxc)
 
         elif mode == 'SNP_INDEL_Somatic':
             ### gatk4 pipeline ###
@@ -345,8 +498,11 @@ def write_call_var():
             if pon and not normal_samples_for_pon:
                 cmd_somatic = somatic_detection.mutect2(input_path, out_path, tmp_dir,ref, tar,con,interval_list,pon,
                                                                 germline, af, maxm,maxc,None)[1]
-                with open('s2_somatic_snp.sh','w') as fw:
-                    fw.write(cmd_somatic)
+                if script == 'T':
+                    with open('s2_somatic_snp.sh','w') as fw:
+                        fw.write(cmd_somatic)
+                else:
+                    run(process, cmd_somatic, jobs, maxc)
 
             elif not pon and normal_samples_for_pon:
 
@@ -354,30 +510,44 @@ def write_call_var():
                 cmd_create_pon,cmd_somatic = somatic_detection.mutect2(input_path, out_path, tmp_dir,ref, tar,con,
                                                                        interval_list,None, germline, af, maxm, maxc,
                                                                        normal_samples_for_pon)
-                for index,sample in enumerate(normal_samples_for_pon_list):
-                    with open('s2.1_'+sample+'_create_pon.sh','w') as fw:
-                        fw.write(cmd_create_pon[index])
-                with open('s2.2_somatic_snp.sh','w') as fw:
-                    fw.write(cmd_somatic)
+                if script == 'T':
+                    for index,sample in enumerate(normal_samples_for_pon_list):
+                        with open('s2.1_'+sample+'_create_pon.sh','w') as fw:
+                            fw.write(cmd_create_pon[index])
+                    with open('s2.2_somatic_snp.sh','w') as fw:
+                        fw.write(cmd_somatic)
+                else:
+                    run(process, cmd_create_pon, jobs, maxc)
+                    run(process, cmd_somatic, jobs, maxc)
             elif not pon and not normal_samples_for_pon:
                 cmd_somatic = somatic_detection.mutect2(input_path, out_path, tmp_dir,ref, tar, con,
                                                         interval_list, None, germline, af, maxm, maxc,None)[1]
-                with open('s2_somatic_snp.sh', 'w') as fw:
-                    fw.write(cmd_somatic)
+
+                if script == 'T':
+                    with open('s2_somatic_snp.sh', 'w') as fw:
+                        fw.write(cmd_somatic)
+                else:
+                    run(process, cmd_somatic, jobs, maxc)
             elif pon and normal_samples_for_pon:
                 print('Warning: parameters -pon and -np were used at the same time, prefer use the PON file first')
                 cmd_somatic = somatic_detection.mutect2(input_path, out_path, tmp_dir,ref, tar,con,interval_list,pon,
                                                             germline, af, maxm, maxc,None)[1]
-                with open('s2_somatic_snp.sh','w') as fw:
-                    fw.write(cmd_somatic)
+                if script == 'T':
+                    with open('s2_somatic_snp.sh','w') as fw:
+                        fw.write(cmd_somatic)
+                else:
+                    run(process, cmd_somatic, jobs, maxc)
 
         elif mode == 'SV_Somatic':
             ### crest pipeline###
             target = input_path + '/' + tar
             control = input_path + '/' + con
             sv_cmd = ngs_vars.ngs_sv(target,control,ref,'crest','true')
-            with open('s2_somatic_sv.sh','w') as fw:
-                fw.write(sv_cmd)
+            if script == 'T':
+                with open('s2_somatic_sv.sh','w') as fw:
+                    fw.write(sv_cmd)
+            else:
+                run(process, sv_cmd, jobs, maxc)
 
         elif mode == 'CNV_Somatic':
             ### control-freec pipeline ###
@@ -386,8 +556,11 @@ def write_call_var():
             config, cnv_cmd = ngs_vars.ngs_cnv(target,control,ref,out_path,'control-freec','human',strategy,'true')
             with open('config.list','w') as fc:
                 fc.write(config)
-            with open('s2.2_somatic_cnv.sh','w') as fw:
-                fw.write(cnv_cmd)
+            if script == 'T':
+                with open('s2.2_somatic_cnv.sh','w') as fw:
+                    fw.write(cnv_cmd)
+            else:
+                run(process, cnv_cmd, jobs, maxc)
 
     elif platform == 'tgs':
         if mode == 'SNP_INDEL':
@@ -395,20 +568,26 @@ def write_call_var():
             snp_indel_cmds = []
             for index,sample in enumerate(path_input):
                 snp_indel_cmds.append(tgs_vars.tgs_snp_indel(ref,sample,path_output[index]))
-            for i,s in enumerate(samples):
-                with open('s2_tgs_'+s+'_snp_indel_gatk4.sh', 'w') as fw:
-                    fw.write(snp_indel_cmds[i])
+            if script == 'T':
+                for i,s in enumerate(samples):
+                    with open('s2_tgs_'+s+'_snp_indel_gatk4.sh', 'w') as fw:
+                        fw.write(snp_indel_cmds[i])
+            else:
+                run(process, snp_indel_cmds, jobs, maxc)
 
         elif mode == 'SV':
             ### sniffles pipeline ###
             sv_cmds = []
             for index,sample in enumerate(path_input):
                 sv_cmds.append(tgs_vars.tgs_sv(sample,path_output[index],'sniffles',sniffles_p))
-            for i,s in enumerate(samples):
-                with open('s2_tgs_'+s+'_sv_sniffles.sh','w') as fw:
-                    fw.write(sv_cmds[i])
+            if script == 'T':
+                for i,s in enumerate(samples):
+                    with open('s2_tgs_'+s+'_sv_sniffles.sh','w') as fw:
+                        fw.write(sv_cmds[i])
+            else:
+                run(process, sv_cmds, jobs, maxc)
 
-def write_annotation():
+def run_annotation(script,jobs):
     input_path = os.path.join(os.path.abspath(outputs_dir), 'var_results/')
     out_path = os.path.join(os.path.abspath(outputs_dir),'annotation_results/')
     subprocess.run(['mkdir', '-p', out_path])
@@ -423,28 +602,48 @@ def write_annotation():
                                                     out_path + sample + '.samtools.snp', buildver)
                             indel_cmd = annotation.annotation('annovar', ref, input_path + sample + '.samtools.indel.vcf.gz', gff3,
                                                       out_path + sample + '.samtools.indel', buildver)
-                            fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                            if script == 'T':
+                                fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                            else:
+                                run(process, snp_cmd, jobs, maxc)
+                                run(process, indel_cmd, jobs, maxc)
                         elif callpipe == 'gatk4':
                             snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.snps.gatk.vcf.gz', gff3,
                                                     out_path + sample + '.gatk.snp', buildver)
                             indel_cmd = annotation.annotation('annovar', ref, input_path + sample + '.indel.gatk.vcf.gz', gff3,
                                                       out_path + sample + '.gatk.indel', buildver)
-                            fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                            if script == 'T':
+                                fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                            else:
+                                run(process, snp_cmd, jobs, maxc)
+                                run(process, indel_cmd, jobs, maxc)
                         elif callpipe == 'samtools+gatk4':
                             snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.concordance.snp.vcf.gz', gff3,
                                                     out_path + sample + '.concordance.snp', buildver)
                             indel_cmd = annotation.annotation('annovar', ref, input_path + sample + '.concordance.indel.vcf.gz', gff3,
                                                       out_path + sample + '.concordance.indel', buildver)
-                            fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                            if script == 'T':
+                                fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                            else:
+                                run(process, snp_cmd, jobs, maxc)
+                                run(process, indel_cmd, jobs, maxc)
                     elif mode == 'CNV':
                         if callpipe == 'cnvnator':
-                            fw.write(annotation.annotation('annovar',ref,input_path + sample + '.cnv.vcf',gff3,
-                                                   out_path+sample+'.cnv',buildver)+'\n')
+                            cmd = annotation.annotation('annovar',ref,input_path + sample + '.cnv.vcf',gff3,
+                                                   out_path+sample+'.cnv',buildver)
+                            if script == 'T':
+                                fw.write(cmd+'\n')
+                            else:
+                                run(process, cmd, jobs, maxc)
                 elif platform == 'tgs':
                     if mode == 'SV':
                         if callpipe == 'sniffles':
-                            fw.write(annotation.annotation('annovar', ref, input_path + sample + '.sv.vcf', gff3,
-                                                       out_path + sample + '.sv', buildver) + '\n')
+                            cmd = annotation.annotation('annovar', ref, input_path + sample + '.sv.vcf', gff3,
+                                                       out_path + sample + '.sv', buildver)
+                            if script == 'T':
+                                fw.write(cmd+'\n')
+                            else:
+                                run(process, cmd, jobs, maxc)
 
     elif v_calling == 'join':
         with open('s3_annotation.sh', 'w') as fw:
@@ -454,23 +653,38 @@ def write_annotation():
                                                 out_path + 'all_samples.samtools.snp', buildver)
                     indel_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.samtools.indel.vcf.gz', gff3,
                                                   out_path + 'all_samples.samtools.indel', buildver)
-                    fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                    if script == 'T':
+                        fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                    else:
+                        run(process, snp_cmd, jobs, maxc)
+                        run(process, indel_cmd, jobs, maxc)
                 elif callpipe == 'gatk4':
                     snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.snps.gatk.vcf.gz', gff3,
                                                     out_path + 'all_samples.gatk.snp', buildver)
                     indel_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.indel.gatk.vcf.gz', gff3,
                                                       out_path + 'all_samples.gatk.indel', buildver)
-                    fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                    if script == 'T':
+                        fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                    else:
+                        run(process, snp_cmd, jobs, maxc)
+                        run(process, indel_cmd, jobs, maxc)
                 elif callpipe == 'samtools+gatk4':
                     snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.concordance.snp.vcf.gz', gff3,
                                                     out_path + 'all_samples.concordance.snp', buildver)
                     indel_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.concordance.indel.vcf.gz', gff3,
                                                       out_path + 'all_samples.concordance.indel', buildver)
-                    fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                    if script == 'T':
+                        fw.write(snp_cmd + '\n' + indel_cmd + '\n')
+                    else:
+                        run(process, snp_cmd, jobs, maxc)
+                        run(process, indel_cmd, jobs, maxc)
             elif mode == 'SNP_INDEL_Somatic':
                 cmd = annotation.annotation('annovar', ref, input_path + tar+'_'+con+'_somatic_m2.filter.pass.vcf.gz', gff3,
                                                     out_path + tar+'_'+con+'somatic', buildver)
-                fw.write(cmd+'\n')
+                if script == 'T':
+                    fw.write(cmd+'\n')
+                else:
+                    run(process, cmd, jobs, maxc)
 
 if __name__ == '__main__':
     examplelog = """EXAMPLES:
@@ -521,7 +735,10 @@ if __name__ == '__main__':
                          help='The maximum JAVA memory in the pipeline')
     general.add_argument('-mc','--max_thread',type=int,default=12,
                          help='The maximum Java theads for GATK GenomicsDBImport')
-    general.add_argument('--script',type=str,default='T',choices=['T', 'F'])
+    general.add_argument('--script',type=str,default='T',choices=['T', 'F'],
+                         help='Generate scripts only (T) or run locally(F)')
+    general.add_argument('--jobs',type=int,default=5,
+                         help='The maximum jobs when run in local at the same time')
     mapref = parser.add_argument_group(title='Mapping options')
     mapref.add_argument('-sp', '--seq_platform',type=str, default='ngs',choices=['ngs','tgs'],
                         help='Reads sequencing platform, ngs for illumina short reads; tgs for Pacbio or ONT long reads')
@@ -610,6 +827,7 @@ if __name__ == '__main__':
     interval = args.interval
     ip = args.interval_padding
     script = args.script
+    jobs = args.jobs
 ### check arguments ###
     index_shell = os.path.abspath(os.path.dirname(__file__))+'/vartools/index.sh'
     statistics_shell = os.path.abspath(os.path.dirname(__file__))+'/vartools/statistics.sh'
@@ -711,14 +929,26 @@ if __name__ == '__main__':
             print('Warning: BWA is used to map short reads in this pipeline,note the format if use minimap2 or NGMLR')
 
 ### run the pipline
-    if script == 'T':
-        write_mapping()
-        write_call_var()
-        write_annotation()
-    elif script == 'F':
-        ## mapping
-        print('step1: mapping to the reference genome')
-        pass
+
+    ## mapping
+    print('###')
+    print('step1: mapping to the reference genome')
+    print('###')
+    run_mapping(script,jobs)
+
+    ## variation calling
+    print('###')
+    print('step2: variation calling')
+    print('###')
+    run_call_var(script,jobs)
+
+    ## annotation
+    print('###')
+    print('step3: annotation by ANNOVAR')
+    print('###')
+    run_annotation(script,jobs)
+
+
 
 
 
