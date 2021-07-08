@@ -734,9 +734,9 @@ if __name__ == '__main__':
     general.add_argument('-bv','--build_version',type=str,default='',choices=['hg19','hg38'],
                           help='Human genome build version,if used,do not set -r and -g')
     general.add_argument('-mx','--max_memory',type=int,default=24,
-                         help='The maximum JAVA memory in the pipeline')
+                         help='The maximum JAVA memory (each sample)')
     general.add_argument('-mc','--max_thread',type=int,default=12,
-                         help='The maximum Java theads for GATK GenomicsDBImport')
+                         help='The maximum Java theads (each sample)')
     general.add_argument('--script',type=str,default='T',choices=['T', 'F'],
                          help='Generate scripts only (T) or run locally(F)')
     general.add_argument('--jobs',type=int,default=5,
