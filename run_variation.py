@@ -16,12 +16,20 @@ def run(func,cmds,jobs,maxc):
     ## split command into sub-commands,
     ## each sub-command has {jobs} tasks
     ## run {jobs} tasks parallelly to save time
-    for i in range(0, len(cmds), jobs):
-        subcmds = cmds[i:i + jobs]
+    if isinstance(cmds,list):
+        for i in range(0, len(cmds), jobs):
+            subcmds = cmds[i:i + jobs]
+            pool = ThreadPool(maxc)
+            pool.map(func, subcmds)
+            pool.close()
+            pool.join()
+    elif isinstance(cmds,str):
+        new_cmds = [cmds]
         pool = ThreadPool(maxc)
-        pool.map(func, subcmds)
+        pool.map(func, new_cmds)
         pool.close()
         pool.join()
+
 
 def run_mapping(script,jobs):
     input_path = os.path.abspath(inputs_dir) + '/'
@@ -83,7 +91,6 @@ def run_call_var(script,jobs):
                 fw.write('\n'.join(map_file) + '\n')
             if callpipe == 'samtools':
                 cmd_call = []
-                cmd_merge = ''
                 if v_calling == 'single': ## single sample calling
                     for index,sample in enumerate(path_output):
                         cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input[index], sample, v_calling,
@@ -94,7 +101,7 @@ def run_call_var(script,jobs):
                                 fw.write(per_cmd)
                     else:
                         run(process, cmd_call, jobs, maxc)
-
+                                   
                 elif v_calling == 'join': ## join calling
                     out_name = out_path+'all_samples'
                     cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input, out_name, v_calling,
@@ -104,11 +111,10 @@ def run_call_var(script,jobs):
                         with open('s2_ngs_all_samples_samtools_call.sh','w') as fw:
                             fw.write(cmd_call[0])
                     else:
-                        run(process, cmd_call, 1, maxc)
+                        run(process, cmd_call, jobs, maxc)
             elif callpipe == 'gatk4':
                 if bqsr_dir and vqsr_dir: ## BQSR and VQSR
                     cmd_call = []
-                    cmd_merge = ''
                     if v_calling == 'single': ##  single sample calling
                         print("Warning: too few samples, VQSR may be failed!")
                         cmd_vqsr = []
@@ -124,7 +130,6 @@ def run_call_var(script,jobs):
                             run(process, cmd_vqsr, jobs, maxc)
 
                     elif v_calling == 'join':  ## join calling
-                        cmd_vqsr = ''
                         for index, sample in enumerate(path_output):
                             cmd_call.append(ngs_vars.snp_indel_gatk(ref, path_input[index], sample,'T',bqsr_dir,interval_list,ip))
                         if script == 'T':
@@ -148,7 +153,6 @@ def run_call_var(script,jobs):
 
                 elif bqsr_dir and not vqsr_dir: ## BQSR and Hard filtering
                     cmd_call = []
-                    cmd_merge = ''
                     if v_calling == 'single':  ##  single sample calling
                         cmd_hard = []
                         for index, sample in enumerate(path_output):
@@ -262,8 +266,6 @@ def run_call_var(script,jobs):
                         else:
                             run(process, cmd_merge, jobs, maxc)
                             run(process, cmd_vqsr, jobs, maxc)
-
-
 
             elif callpipe == 'samtools+gatk4':
                 if v_calling == 'single':  ##  single sample calling
