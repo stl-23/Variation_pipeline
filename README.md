@@ -17,12 +17,11 @@ cd “YOUR_DATABASE_DIR” && sh ./install_genome_data.sh hg38 /tool/annovar
 ```
 docker run -itd --name variationv1.0 -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output variation:v1.0 /bin/bash
 ```
-4. Run the pipeline
+
+4 Run the pipeline
 ```
-docker run -v "YOUR_INPUT_DIR":/input\
--v "YOUR_OUTPUT_DIR":/output \
--v “YOUR_WORK_DIR”:/work \
-variation:v1.0 bash -c 'cd /work/ && python3 /script/variation/run_variation.py \
+docker exec -it CONTAINER_ID bash
+cd /work/ && python3 /script/variation/run_variation.py \
 -i /input \
 -o /output \
 -bv hg38 \
@@ -30,11 +29,12 @@ variation:v1.0 bash -c 'cd /work/ && python3 /script/variation/run_variation.py 
 -sg WGS \
 -mt BWA \
 -cp gatk4 \
--mode SNP_INDEL
+-mode SNP_INDEL \
+--script F \
+--jobs 3
 ```
-5 Run the shell script
 
-preparing...
+
 # Parameters
 ```
 usage: run_variation.py [-h] [-i INPUT] [-o OUTPUT] [-r REFERENCE] [-g GFF3]
