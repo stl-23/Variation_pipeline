@@ -37,19 +37,14 @@ cd /work/ && python3 /script/variation/run_variation.py \
 
 # Parameters
 ```
-usage: run_variation.py [-h] [-i INPUT] [-o OUTPUT] [-r REFERENCE] [-g GFF3]
-                        [-bv {hg19,hg38}] [-mx MAX_MEMORY] [-mc MAX_THREAD]
-                        [-sp {ngs,tgs}] [-st {PE,SE}]
-                        [-mt {BWA,Minimap2,NGMLR}] [-mp MAPTOOL_PARAMETERS]
-                        [-sg {WGS,WES}]
+usage: run_variation.py [-h] [-i INPUT] [-o OUTPUT] [-r REFERENCE] [-g GFF3] [-bv {hg19,hg38}] [-mx MAX_MEMORY]
+                        [-mc MAX_THREAD] [--script {T,F}] [--jobs JOBS] [-sp {ngs,tgs}] [-st {PE,SE}]
+                        [-mt {BWA,Minimap2,NGMLR}] [-mp MAPTOOL_PARAMETERS] [-sg {WGS,WES}]
                         [-cp {samtools,gatk4,samtools+gatk4,breakdancer,cnvnator,control-freec,sniffles}]
-                        [-mode {SNP_INDEL,SNP_INDEL_Somatic,CNV,SV,CNV_Somatic}]
-                        [--bcftools_filter BCFTOOLS_FILTER] [-bqsr [BQSR]]
-                        [-vqsr [VQSR]] [-vc {single,join}] [-tar TARGET]
-                        [-con CONTROL] [-pon PANEL_OF_NORMALS]
-                        [-np NORMAL_SAMPLES_FOR_PON] [-gm GERMLINE]
-                        [-af AF_OF_ALLELES_NOT_IN_RESOURCE]
-                        [--interval INTERVAL]
+                        [-mode {SNP_INDEL,SNP_INDEL_Somatic,CNV,SV,CNV_Somatic}] [--bcftools_filter BCFTOOLS_FILTER]
+                        [-bqsr [BQSR]] [-vqsr [VQSR]] [-vc {single,join}] [--interval INTERVAL]
+                        [--interval_padding INTERVAL_PADDING] [-tar TARGET] [-con CONTROL] [-pon PANEL_OF_NORMALS]
+                        [-np NORMAL_SAMPLES_FOR_PON] [-gm GERMLINE] [-af AF_OF_ALLELES_NOT_IN_RESOURCE]
                         [--sniffles_parameters SNIFFLES_PARAMETERS]
 
 Variation pipeline v1.0
@@ -62,25 +57,23 @@ General options:
                         The output directory
   -r REFERENCE, --reference REFERENCE
                         The fasta file of reference
-  -g GFF3, --gff3 GFF3  The gff3 file of reference for variation sites
-                        annotation
+  -g GFF3, --gff3 GFF3  The gff3 file of reference for variation sites annotation
   -bv {hg19,hg38}, --build_version {hg19,hg38}
-                        Human genome build version,if used,do not set -r and
-                        -g
+                        Human genome build version,if used,do not set -r and -g
   -mx MAX_MEMORY, --max_memory MAX_MEMORY
                         The maximum JAVA memory in the pipeline
   -mc MAX_THREAD, --max_thread MAX_THREAD
                         The maximum Java theads for GATK GenomicsDBImport
+  --script {T,F}        Generate scripts only (T) or run locally(F)
+  --jobs JOBS           The maximum jobs when run in local at the same time
 
 Mapping options:
   -sp {ngs,tgs}, --seq_platform {ngs,tgs}
-                        Reads sequencing platform, ngs for illumina short
-                        reads; tgs for Pacbio or ONT long reads
+                        Reads sequencing platform, ngs for illumina short reads; tgs for Pacbio or ONT long reads
   -st {PE,SE}, --seq_type {PE,SE}
                         Sequencing type, paired-end/mate-pair, or single end
   -mt {BWA,Minimap2,NGMLR}, --maptool {BWA,Minimap2,NGMLR}
-                        Choose an alignment
-                        tool,illumina:BWA;Pacbio/ONT:Minimap2/NGMLR
+                        Choose an alignment tool,illumina:BWA;Pacbio/ONT:Minimap2/NGMLR
   -mp MAPTOOL_PARAMETERS, --maptool_parameters MAPTOOL_PARAMETERS
                         Set parameters for alignment tools
 
@@ -92,22 +85,19 @@ Detection variation (SNP/INDEL/SV/CNV) options:
   -mode {SNP_INDEL,SNP_INDEL_Somatic,CNV,SV,CNV_Somatic}, --mode {SNP_INDEL,SNP_INDEL_Somatic,CNV,SV,CNV_Somatic}
                         Mutation types
   --bcftools_filter BCFTOOLS_FILTER
-                        Hard filter paramters for SNP/Indel detection pipeline
-                        by bcftools. See
-                        http://samtools.github.io/bcftools/howtos/variant-
-                        calling.html
+                        Hard filter paramters for SNP/Indel detection pipeline by bcftools. See
+                        http://samtools.github.io/bcftools/howtos/variant-calling.html
   -bqsr [BQSR], --BQSR [BQSR]
-                        The directory that only contain known sites for BQSR
-                        parameter(GATK4 only)
+                        The directory that only contain known sites for BQSR parameter(GATK4 only)
   -vqsr [VQSR], --VQSR [VQSR]
-                        Choose a method for mutations quality control(GATK4
-                        only), if set this parameters, please provide a
-                        directory that only contain resource files; if not,
-                        hard_filtering will be used
+                        Choose a method for mutations quality control(GATK4 only), if set this parameters, please provide a
+                        directory that only contain resource files; if not, hard_filtering will be used
   -vc {single,join}, --variation_calling {single,join}
-                        Calling a group of samples together(join calling) or
-                        Variant calling with a single sample only(single
-                        sample calling), default is single
+                        Calling a group of samples together(join calling) or Variant calling with a single sample
+                        only(single sample calling), default is single
+  --interval INTERVAL   The interval file
+  --interval_padding INTERVAL_PADDING
+                        The interval padding
 
 Somatic mutation options:
   -tar TARGET, --target TARGET
@@ -115,19 +105,15 @@ Somatic mutation options:
   -con CONTROL, --control CONTROL
                         The control(normal) sample name
   -pon PANEL_OF_NORMALS, --panel_of_normals PANEL_OF_NORMALS
-                        The PON(panel of normal) vcf file,if not provided, use
-                        the --normal_samples_for_pon paramters to create the
-                        normal panel
+                        The PON(panel of normal) vcf file,if not provided, use the --normal_samples_for_pon paramters to
+                        create the normal panel
   -np NORMAL_SAMPLES_FOR_PON, --normal_samples_for_pon NORMAL_SAMPLES_FOR_PON
-                        The sample name of normal samples to create the
-                        PON,e.g. sample1,sample2,sample3...
+                        The sample name of normal samples to create the PON,e.g. sample1,sample2,sample3...
   -gm GERMLINE, --germline GERMLINE
                         The population germline resource
   -af AF_OF_ALLELES_NOT_IN_RESOURCE, --af_of_alleles_not_in_resource AF_OF_ALLELES_NOT_IN_RESOURCE
-                        The GATK4 af-of-alleles-not-in-resource parameter in
-                        Mutect2, The default of 0.001 is appropriate for human
-                        sample analyses without any population resource.
-  --interval INTERVAL   The interval file
+                        The GATK4 af-of-alleles-not-in-resource parameter in Mutect2, The default of 0.001 is appropriate
+                        for human sample analyses without any population resource.
 
 TGS(Third generation sequencing) SV options:
   --sniffles_parameters SNIFFLES_PARAMETERS
