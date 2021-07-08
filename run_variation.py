@@ -101,7 +101,7 @@ def run_call_var(script,jobs):
                                 fw.write(per_cmd)
                     else:
                         run(process, cmd_call, jobs, maxc)
-                                   
+
                 elif v_calling == 'join': ## join calling
                     out_name = out_path+'all_samples'
                     cmd_call.append(ngs_vars.snp_indel_samtools(ref, path_input, out_name, v_calling,
@@ -600,7 +600,7 @@ def run_annotation(script,jobs):
                 if platform == 'ngs':
                     if mode == 'SNP_INDEL':
                         if callpipe == 'samtools':
-                            snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.samtools.snps.vcf.gz', gff3,
+                            snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.samtools.snp.vcf.gz', gff3,
                                                     out_path + sample + '.samtools.snp', buildver)
                             indel_cmd = annotation.annotation('annovar', ref, input_path + sample + '.samtools.indel.vcf.gz', gff3,
                                                       out_path + sample + '.samtools.indel', buildver)
@@ -610,7 +610,7 @@ def run_annotation(script,jobs):
                                 run(process, snp_cmd, jobs, maxc)
                                 run(process, indel_cmd, jobs, maxc)
                         elif callpipe == 'gatk4':
-                            snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.snps.gatk.vcf.gz', gff3,
+                            snp_cmd = annotation.annotation('annovar', ref, input_path + sample + '.snp.gatk.vcf.gz', gff3,
                                                     out_path + sample + '.gatk.snp', buildver)
                             indel_cmd = annotation.annotation('annovar', ref, input_path + sample + '.indel.gatk.vcf.gz', gff3,
                                                       out_path + sample + '.gatk.indel', buildver)
@@ -651,7 +651,7 @@ def run_annotation(script,jobs):
         with open('s3_annotation.sh', 'w') as fw:
             if mode == 'SNP_INDEL':
                 if callpipe == 'samtools':
-                    snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.samtools.snps.vcf.gz', gff3,
+                    snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.samtools.snp.vcf.gz', gff3,
                                                 out_path + 'all_samples.samtools.snp', buildver)
                     indel_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.samtools.indel.vcf.gz', gff3,
                                                   out_path + 'all_samples.samtools.indel', buildver)
@@ -661,7 +661,7 @@ def run_annotation(script,jobs):
                         run(process, snp_cmd, jobs, maxc)
                         run(process, indel_cmd, jobs, maxc)
                 elif callpipe == 'gatk4':
-                    snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.snps.gatk.vcf.gz', gff3,
+                    snp_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.snp.gatk.vcf.gz', gff3,
                                                     out_path + 'all_samples.gatk.snp', buildver)
                     indel_cmd = annotation.annotation('annovar', ref, input_path + 'all_samples.indel.gatk.vcf.gz', gff3,
                                                       out_path + 'all_samples.gatk.indel', buildver)
