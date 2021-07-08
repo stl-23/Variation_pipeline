@@ -826,7 +826,7 @@ if __name__ == '__main__':
     af = args.af_of_alleles_not_in_resource
     sniffles_p = args.sniffles_parameters.strip('"')
     bcftools_filter = args.bcftools_filter.strip('"')
-    interval = args.interval
+    interval_list = args.interval
     ip = args.interval_padding
     script = args.script
     jobs = args.jobs
@@ -845,7 +845,7 @@ if __name__ == '__main__':
                 bqsr_dir = os.path.join(genomicsdb,'bqsr_resource/')
             if vqsr_dir:
                 vqsr_dir = os.path.join(genomicsdb,'vqsr_resource/')
-            if not interval:
+            if not interval_list:
                 if strategy == 'WGS':
                     interval_list = prefix + '.interval_list'
                 elif strategy == 'WES':
@@ -872,7 +872,7 @@ if __name__ == '__main__':
                 bqsr_dir = os.path.join(genomicsdb,'bqsr_resource/')
             if vqsr_dir:
                 vqsr_dir = os.path.join(genomicsdb,'vqsr_resource/')
-            if not interval:
+            if not interval_list:
                 if strategy == 'WGS':
                     interval_list = prefix + '.interval_list'
                 elif strategy == 'WES':
@@ -896,7 +896,7 @@ if __name__ == '__main__':
             gff3 = prefix+'.gff3'
         if mode == 'SNP_INDEL_Somatic' and not interval:
             raise Exception('Error: no interval file provided')
-        if strategy and not interval:
+        if strategy and not interval_list:
             raise Exception('Error: no interval file provided')
 
     elif buildver and (ref or gff3):
