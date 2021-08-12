@@ -13,15 +13,9 @@ wget -c https://github.com/stl-23/Variation_pipelinev1.0/install_genome_data.sh
 
 cd “YOUR_DATABASE_DIR” && sh ./install_genome_data.sh hg38 /tool/annovar
 ```
-3. Start docker image
+3. Run the pipeline
 ```
-docker run -itd --name variationv1.0 -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output variation:v1.0 /bin/bash
-```
-
-4 Run the pipeline
-```
-docker exec -it CONTAINER_ID bash
-cd /work/ && python3 /script/variation/run_variation.py \
+docker run --rm -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output variation:v1.0 /bin/bash -c "cd /work/ && python3 /script/variation/run_variation.py \
 -i /input \
 -o /output \
 -bv hg38 \
@@ -31,8 +25,9 @@ cd /work/ && python3 /script/variation/run_variation.py \
 -cp gatk4 \
 -mode SNP_INDEL \
 --script F \
---jobs 3
+--jobs 3"
 ```
+
 
 
 # Parameters
