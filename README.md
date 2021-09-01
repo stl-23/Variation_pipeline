@@ -15,7 +15,7 @@ cd “YOUR_DATABASE_DIR” && sh ./install_genome_data.sh hg38 /tool/annovar
 ```
 3. Run the pipeline
 ```
-docker run --rm -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output stl23/variation:v1.0 /bin/bash -c "cd /work/ && python3 /script/variation/run_variation.py \
+docker run --rm -v "SCRIPTs_DIR":/scripts/ -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output stl23/variation:v1.0 /bin/bash -c "cd /work/ && python3 /scripts/run_variation.py \
 -i /input \
 -o /output \
 -bv hg38 \
@@ -27,7 +27,20 @@ docker run --rm -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_
 --script F \
 --jobs 3"
 ```
-
+For example:
+```
+docker run --rm -v /mnt/data/stl/wgs/Variation_pipelinev1.0:/scripts/ -v /mnt/data/stl/wgs/Variation_pipelinev1.0/database/genomicsdb/:/scripts/database/genomicsdb/ -v /mnt/data/stl/wgs/cleandata:/input -v /mnt/data/stl/wgs/wgs_results/:/output stl23/variation:v1.0 /bin/bash -c "python3 /scripts/run_variation.py \
+-i /input \
+-o /output \
+-bv hg38 \
+-sp ngs \
+-sg WGS \
+-mt BWA \
+-cp gatk4 \
+-mode SNP_INDEL \
+--script F \
+--jobs 3"
+```
 
 
 # Parameters
