@@ -15,7 +15,7 @@ cd “YOUR_DATABASE_DIR” && sh ./install_genome_data.sh hg38 /tool/annovar
 ```
 3. Run the pipeline
 ```
-docker run --rm -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output variation:v1.0 /bin/bash -c "cd /work/ && python3 /script/variation/run_variation.py \
+docker run --rm -v "YOUR_DATABASE_DIR":/scripts/database/genomicsdb/ -v “YOUR_WORK_DIR”:/work -v "YOUR_INPUT_DIR":/input -v "YOUR_OUTPUT_DIR":/output stl23/variation:v1.0 /bin/bash -c "cd /work/ && python3 /script/variation/run_variation.py \
 -i /input \
 -o /output \
 -bv hg38 \
