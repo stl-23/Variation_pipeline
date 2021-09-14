@@ -37,7 +37,7 @@ def vqsr(ref,vcf,vqsr_dir,out):
 -mode SNP \\
 -O {out}.snps.gatk.vcf.gz
 
-{gatk4} VariantRecalibrator -R {ref} -V {vcf} \\
+{gatk4} VariantRecalibrator -R {ref} -V {out}.snps.gatk.vcf.gz \\
 {indel_resource_all} \\
 --trust-all-polymorphic \\
 -tranche 100.0 -tranche 99.95 -tranche 99.9 -tranche 99.5 -tranche 99.0 -tranche 97.0 -tranche 96.0 -tranche 95.0 -tranche 94.0 -tranche 93.5 -tranche 93.0 -tranche 92.0 -tranche 91.0 -tranche 90.0 \\
@@ -46,7 +46,7 @@ def vqsr(ref,vcf,vqsr_dir,out):
 #--rscript-file {out}.indel.plots.R \\
 --tranches-file {out}.indel.tranches \\
 -O {out}.indel.recal
-{gatk4} ApplyVQSR -R {ref} -V {vcf} \\
+{gatk4} ApplyVQSR -R {ref} -V {out}.snps.gatk.vcf.gz \\
 --truth-sensitivity-filter-level 99.7 \\
 --tranches-file {out}.indel.tranches \\
 --recal-file {out}.indel.recal \\
